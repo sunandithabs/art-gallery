@@ -139,7 +139,6 @@ const ROOM_GUIDE_TARGETS = [
   { id: "07", label: "ROOM 07", x: -13.25, z: 0 },
   { id: "08", label: "ROOM 08", x: -23.75, z: 0 },
   { id: "09", label: "ROOM 09", x: -34.25, z: 0 },
-  { id: "10", label: "ROOM 10", x: 15.5, z: 28.7 },
   { id: "11", label: "ROOM 11", x: 0, z: 39.7 },
 ] as const;
 
@@ -1141,7 +1140,7 @@ const BASE_RECTS = [
   { minX: -CORRIDOR.width / 2 + 0.62, maxX: CORRIDOR.width / 2 - 0.62, minZ: ROOM.depth / 2 - 0.5, maxZ: ROOM.depth / 2 + CORRIDOR.depth + 0.25 },
   { minX: 6.95, maxX: 8.85, minZ: 27.2, maxZ: 30.2 },
   { minX: -8.55, maxX: -6.5, minZ: 12.5, maxZ: 23.0 },
-  ...[...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT].map((layout) => ({ minX: layout.x - EXTENDED_ROOM.width / 2 + 0.78, maxX: layout.x + EXTENDED_ROOM.width / 2 - 0.78, minZ: layout.z - EXTENDED_ROOM.depth / 2 - 0.25, maxZ: layout.z + EXTENDED_ROOM.depth / 2 + 0.25 })),
+  ...[...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT.filter((layout) => layout.room !== 4 && layout.room !== 10)].map((layout) => ({ minX: layout.x - EXTENDED_ROOM.width / 2 + 0.78, maxX: layout.x + EXTENDED_ROOM.width / 2 - 0.78, minZ: layout.z - EXTENDED_ROOM.depth / 2 - 0.25, maxZ: layout.z + EXTENDED_ROOM.depth / 2 + 0.25 })),
 ];
 const SECRET_RECT = { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 34.0, maxZ: 45.0 };
 const FINAL_RECT = { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 45.0, maxZ: 55.42 };
