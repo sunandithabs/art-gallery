@@ -103,38 +103,6 @@ button { border: 0; }
   text-transform: uppercase;
 }
 
-.birthday-installation {
-  position: absolute;
-  top: clamp(22px, 4vw, 52px);
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 8px 15px 9px;
-  border-top: 1px solid rgba(128, 102, 141, 0.28);
-  border-bottom: 1px solid rgba(128, 102, 141, 0.16);
-  color: rgba(30, 29, 27, 0.74);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.birthday-rule { width: 18px; height: 1px; background: #b49cbd; }
-.birthday-kicker { margin: 0 0 3px; color: rgba(30, 29, 27, 0.42); font-size: 7px; letter-spacing: 0.16em; text-transform: uppercase; }
-.birthday-title { margin: 0; color: #66536c; font-family: "Cormorant Garamond", Georgia, serif; font-size: clamp(18px, 2.2vw, 26px); line-height: 0.9; }
-
-.birthday-balloons { position: absolute; z-index: 2; width: 72px; height: 116px; pointer-events: none; opacity: 0.84; }
-.birthday-balloons-left { left: clamp(18px, 7vw, 110px); bottom: clamp(96px, 17vh, 170px); transform: rotate(-7deg); }
-.birthday-balloons-right { right: clamp(18px, 8vw, 128px); bottom: clamp(88px, 14vh, 150px); transform: rotate(9deg) scale(0.82); opacity: 0.68; }
-.birthday-balloon { position: absolute; display: block; width: 30px; height: 38px; border-radius: 52% 48% 50% 50%; box-shadow: inset -6px -5px 8px rgba(53, 37, 58, 0.09), inset 6px 5px 7px rgba(255, 255, 255, 0.28); }
-.birthday-balloon::after { content: ""; position: absolute; left: 50%; bottom: -4px; width: 4px; height: 5px; background: inherit; clip-path: polygon(0 0, 100% 0, 50% 100%); transform: translateX(-50%); }
-.balloon-lavender { left: 8px; top: 19px; background: #b9a6c6; }
-.balloon-ivory { left: 30px; top: 2px; width: 27px; height: 36px; background: #e8e1d7; }
-.balloon-dusty-blue { left: 43px; top: 30px; width: 25px; height: 33px; background: #9aa9ab; }
-.balloon-gold { left: 21px; top: 5px; width: 27px; height: 36px; background: #c8ae7a; }
-.birthday-strings { position: absolute; left: 42px; top: 52px; width: 1px; height: 64px; background: rgba(91, 73, 84, 0.36); transform: rotate(8deg); transform-origin: top; }
-.birthday-strings::after { content: ""; position: absolute; left: 8px; top: 10px; width: 1px; height: 56px; background: rgba(91, 73, 84, 0.22); transform: rotate(-12deg); }
-
 .museum-room-meta {
   position: absolute;
   top: clamp(24px, 4vw, 54px);
@@ -253,18 +221,6 @@ button { border: 0; }
   background: #292a27;
   cursor: crosshair;
 }
-
-.mini-map-route-line { position: absolute; display: block; background: rgba(210, 199, 222, 0.42); }
-.mini-map-route-one { left: 50%; top: 15%; width: 1px; height: 70%; }
-.mini-map-route-two { left: 19%; top: 50%; width: 62%; height: 1px; }
-.mini-map-room { position: absolute; display: grid; place-items: center; min-width: 24px; height: 18px; border: 1px solid rgba(247, 244, 236, 0.28); background: rgba(90, 91, 85, 0.9); color: rgba(247, 244, 236, 0.72); font-size: 7px; letter-spacing: 0.04em; }
-.mini-map-room-main { left: 41%; top: 42%; }
-.mini-map-room-corridor { left: 43%; top: 66%; }
-.mini-map-room-north { left: 41%; top: 10%; }
-.mini-map-room-west { left: 4%; top: 42%; }
-.mini-map-room-east { right: 4%; top: 42%; }
-.mini-map-room-final { left: 41%; bottom: 7%; }
-.mini-map-player-dot { position: absolute; width: 10px; height: 10px; border: 2px solid #fff8df; border-radius: 50%; background: #bb9bd1; box-shadow: 0 0 0 4px rgba(187, 155, 209, 0.24), 0 0 8px rgba(255, 249, 221, 0.72); transform: translate(-50%, -50%); transition: left 180ms linear, top 180ms linear; }
 
 .mini-map-svg { display: block; width: 100%; height: 100%; }
 .mini-map-floor { fill: #5a5b55; stroke: #9d9e96; stroke-width: 1; }
@@ -571,63 +527,8 @@ button { border: 0; }
 .artwork-close:hover { background: rgba(194, 180, 216, 0.28); color: #5e4770; }
 .artwork-close:active { transform: scale(0.95); }
 
-.birthday-letter {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 12;
-  width: min(520px, calc(100vw - 40px));
-  padding: 31px 34px 34px;
-  border: 1px solid rgba(128, 102, 141, 0.24);
-  background: #fbf8f2;
-  color: #29262b;
-  box-shadow: 0 28px 80px rgba(54, 42, 52, 0.24);
-  transform: translate(-50%, -50%);
-  animation: birthday-letter-in 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
-  pointer-events: auto;
-}
-.birthday-letter::before { content: ""; position: absolute; top: 0; left: 0; width: 86px; height: 3px; background: #b9a6c6; }
-.birthday-letter-kicker { color: #80668d; font-size: 8px; letter-spacing: 0.2em; }
-.birthday-letter h2 { margin: 18px 0 15px; font-family: "Cormorant Garamond", Georgia, serif; font-size: 32px; font-weight: 500; }
-.birthday-letter textarea { display: block; width: 100%; min-height: 170px; resize: vertical; padding: 14px; border: 1px solid rgba(128, 102, 141, 0.24); background: rgba(255, 255, 255, 0.62); color: #29262b; font: 14px/1.65 "DM Sans", sans-serif; outline: none; }
-.birthday-letter textarea:focus { border-color: #80668d; box-shadow: 0 0 0 3px rgba(194, 180, 216, 0.22); }
-.birthday-letter-save { margin-top: 18px; padding: 11px 17px; border: 1px solid rgba(128, 102, 141, 0.38); background: #80668d; color: #fffaf5; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; }
-.birthday-letter-save:hover { background: #6b5278; }
-@keyframes birthday-letter-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
-
-.cake-proximity-prompt {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(74px, 12vh, 118px);
-  z-index: 7;
-  display: grid;
-  gap: 5px;
-  min-width: 190px;
-  padding: 11px 16px 12px;
-  border: 1px solid rgba(244, 231, 216, 0.35);
-  background: rgba(48, 40, 43, 0.86);
-  color: #f4e7d8;
-  text-align: center;
-  box-shadow: 0 12px 34px rgba(26, 19, 23, 0.22);
-  backdrop-filter: blur(10px);
-  transform: translateX(-50%);
-  animation: cake-prompt-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
-  pointer-events: none;
-}
-.cake-proximity-prompt strong { font-size: 10px; letter-spacing: 0.18em; }
-.cake-proximity-prompt span { color: rgba(244, 231, 216, 0.65); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
-@keyframes cake-prompt-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
-
 @media (max-width: 640px) {
-  .birthday-installation { top: 18px; left: 50%; width: max-content; max-width: 54vw; padding-inline: 9px; }
-  .birthday-kicker { font-size: 6px; }
-  .birthday-title { font-size: 17px; }
-  .birthday-rule { display: none; }
-  .birthday-balloons { transform: scale(0.7) rotate(-7deg); transform-origin: bottom left; }
-  .birthday-balloons-right { transform: scale(0.58) rotate(9deg); transform-origin: bottom right; }
   .museum-room-meta { display: none; }
-  .birthday-letter { padding: 27px 22px 25px; }
-  .cake-proximity-prompt { bottom: 84px; }
   .room-guide { bottom: 50px; }
   .mini-map {
     top: 18px;
@@ -1077,11 +978,6 @@ button { border: 0; }
 .frame-editor-row { display: flex; gap: 6px; margin-top: 9px; }
 .frame-editor button { min-width: 34px; padding: 7px 9px; border: 1px solid rgba(128, 102, 141, 0.32); background: transparent; color: #80668d; font-size: 12px; cursor: pointer; }
 .frame-editor-row:last-of-type button { flex: 1; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
-.frame-editor-nudge { margin-top: 9px; }
-.frame-editor-nudge > span { display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(30,29,27,0.45); margin-bottom: 5px; }
-.frame-editor-nudge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-.frame-editor-nudge-grid button { padding: 6px 4px; font-size: 11px; background: rgba(30,29,27,0.05); border: 1px solid rgba(30,29,27,0.12); cursor: pointer; border-radius: 3px; }
-.frame-editor-nudge-grid button:hover { background: rgba(30,29,27,0.1); }
 .frame-editor small { display: block; margin-top: 9px; color: rgba(30, 29, 27, 0.52); font-size: 10px; line-height: 1.45; }
 
 

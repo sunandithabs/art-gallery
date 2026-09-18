@@ -54,6 +54,7 @@ function TicketArtwork() {
       </div>
       <div className="ticket-issue">SPECIAL COLLECTION / ANAGHA</div>
       <div className="ticket-stamp">AG<br /><small>ADMIT</small></div>
+      <div className="ticket-barcode" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
       <div className="ticket-rule ticket-rule-bottom" />
     </div>
   );
