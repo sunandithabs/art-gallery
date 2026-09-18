@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install --no-frozen-lockfile && pnpm run build:local"
+
+[deploy]
+startCommand = "node dist/index.js"
+restartPolicyType = "always"
