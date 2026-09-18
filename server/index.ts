@@ -21,7 +21,7 @@ async function startServer() {
     : path.resolve(__dirname, "..", "client", "public");
 
   const uploadsDir = isProd
-    ? path.resolve(__dirname, "..", "uploads")
+    ? path.resolve(__dirname, "public", "uploads")
     : path.resolve(__dirname, "..", "client", "public", "uploads");
 
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
