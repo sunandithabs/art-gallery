@@ -47,6 +47,13 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // Disable Express's default CSP so the React app can load
+  app.use((_req, res, next) => {
+    res.removeHeader("Content-Security-Policy");
+    res.removeHeader("X-Content-Type-Options");
+    next();
+  });
+
   app.use("/uploads", express.static(uploadsDir));
   app.use(express.static(publicPath));
 
