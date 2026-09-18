@@ -12,7 +12,18 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  const uploadsDir = path.resolve(__dirname, "..", "client", "public", "uploads");
+  const isProd = process.env.NODE_ENV === "production";
+
+  // In production, dist/index.js is in dist/ and public files are in dist/public/
+  // In dev, server/index.ts is in server/ and public files are in client/public/
+  const publicPath = isProd
+    ? path.resolve(__dirname, "public")
+    : path.resolve(__dirname, "..", "client", "public");
+
+  const uploadsDir = isProd
+    ? path.resolve(__dirname, "..", "uploads")
+    : path.resolve(__dirname, "..", "client", "public", "uploads");
+
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
   const storage = multer.diskStorage({
@@ -37,8 +48,15 @@ async function startServer() {
   });
 
   app.use("/uploads", express.static(uploadsDir));
+  app.use(express.static(publicPath));
 
-  const port = process.env.PORT || 3001;
+  app.get("*", (_req, res) => {
+    const indexPath = path.join(publicPath, "index.html");
+    if (fs.existsSync(indexPath)) res.sendFile(indexPath);
+    else res.status(404).send("Not found");
+  });
+
+  const port = Number(process.env.PORT) || 3001;
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
