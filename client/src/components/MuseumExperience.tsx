@@ -33,7 +33,11 @@ function readSavedFrames(): SavedFrame[] {
   } catch { return []; }
 }
 function writeSavedFrames(frames: SavedFrame[]) {
-  try { window.localStorage.setItem(SAVED_FRAMES_KEY, JSON.stringify(frames)); return true; } catch { return false; }
+  try {
+    window.localStorage.setItem(SAVED_FRAMES_KEY, JSON.stringify(frames));
+    fetch("/api/frames", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(frames) }).catch(() => {});
+    return true;
+  } catch { return false; }
 }
 
 const ARTWORKS: Artwork[] = [
@@ -1179,6 +1183,7 @@ export default function MuseumExperience() {
   const [currentRoom, setCurrentRoom] = useState("ROOM 01");
   const [mapPlayer, setMapPlayer] = useState({ x: 0, z: 4.35, yaw: 0 });
   const [visitedRooms, setVisitedRooms] = useState<string[]>(["01", "02"]);
+  const [framesLoaded, setFramesLoaded] = useState(false);
   const [guide, setGuide] = useState({ arrow: "↑", label: "ROOM 02" });
   const [secretUnlocked, setSecretUnlocked] = useState(false);
   const [showUnlockNotice, setShowUnlockNotice] = useState(false);
@@ -1207,6 +1212,18 @@ export default function MuseumExperience() {
     if (!selectedArtwork) return;
     setEditDetails({ title: selectedArtwork.title, note: selectedArtwork.note, year: selectedArtwork.year });
   }, [selectedArtwork]);
+
+  useEffect(() => {
+    fetch("/api/frames")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((serverFrames) => {
+        if (Array.isArray(serverFrames) && serverFrames.length) {
+          window.localStorage.setItem(SAVED_FRAMES_KEY, JSON.stringify(serverFrames));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setFramesLoaded(true));
+  }, []);
 
   const armNewFrame = async (file: File | undefined) => {
     if (!file || (!file.type.startsWith("image/") && !file.type.startsWith("video/"))) return;
@@ -1334,6 +1351,7 @@ export default function MuseumExperience() {
   };
 
   useEffect(() => {
+    if (!framesLoaded) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -1708,7 +1726,7 @@ export default function MuseumExperience() {
       });
       renderer.dispose();
     };
-  }, []);
+  }, [framesLoaded]);
 
   return (
     <main className="museum-shell" aria-label="Interactive three-room digital museum">

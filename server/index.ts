@@ -55,6 +55,24 @@ async function startServer() {
   });
 
   app.use("/uploads", express.static(uploadsDir));
+
+  const framesPath = path.join(uploadsDir, "frames.json");
+  app.get("/api/frames", (_req, res) => {
+    if (!fs.existsSync(framesPath)) return res.json([]);
+    try {
+      res.json(JSON.parse(fs.readFileSync(framesPath, "utf-8")));
+    } catch {
+      res.json([]);
+    }
+  });
+  app.post("/api/frames", express.json({ limit: "10mb" }), (req, res) => {
+    try {
+      fs.writeFileSync(framesPath, JSON.stringify(req.body, null, 2));
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ ok: false });
+    }
+  });
   app.use(express.static(publicPath));
 
   app.get("*", (_req, res) => {
