@@ -33,7 +33,11 @@ function readSavedFrames(): SavedFrame[] {
   } catch { return []; }
 }
 function writeSavedFrames(frames: SavedFrame[]) {
-  try { window.localStorage.setItem(SAVED_FRAMES_KEY, JSON.stringify(frames)); return true; } catch { return false; }
+  try {
+    window.localStorage.setItem(SAVED_FRAMES_KEY, JSON.stringify(frames));
+    fetch("/api/frames", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(frames) }).catch(() => {});
+    return true;
+  } catch { return false; }
 }
 
 const ARTWORKS: Artwork[] = [
@@ -113,7 +117,7 @@ const SATELLITE_LAYOUT = [
   { room: 4, x: -15.5, z: 17.7, palette: 3, openings: ["east"] },
   { room: 10, x: 15.5, z: 28.7, palette: 5, openings: ["west"] },
 ] as const;
-const EYE_HEIGHT = 2.15;
+const EYE_HEIGHT = 2.8;
 const ARCH_HEIGHT = 5.8;
 const ARCH_CLEARANCE = 2.6;
 const ARCH_OPENINGS = [
@@ -129,13 +133,12 @@ const ROOM_GUIDE_TARGETS = [
   { id: "01", label: "ROOM 01", x: 0, z: 0 },
   { id: "02", label: "ROOM 02", x: 0, z: 17.7 },
   { id: "03", label: "ROOM 03", x: 0, z: 28.7 },
-  { id: "04", label: "ROOM 04", x: -15.5, z: 17.7 },
+
   { id: "05", label: "ROOM 05", x: 13.25, z: 0 },
   { id: "06", label: "ROOM 06", x: 23.75, z: 0 },
   { id: "07", label: "ROOM 07", x: -13.25, z: 0 },
   { id: "08", label: "ROOM 08", x: -23.75, z: 0 },
   { id: "09", label: "ROOM 09", x: -34.25, z: 0 },
-  { id: "10", label: "ROOM 10", x: 15.5, z: 28.7 },
   { id: "11", label: "ROOM 11", x: 0, z: 39.7 },
 ] as const;
 
@@ -363,12 +366,10 @@ function buildArtwork(artwork: Artwork, scene: THREE.Scene, interactive: THREE.O
   // tangent) so that moving, rotating, or resizing one frame always carries
   // its stanchions and lighting with it — nothing is left behind on the wall.
   if (!mini) {
-    addArtworkStanchions(group, artwork);
     addArtworkSpotlight(group, artwork);
   }
   label.visible = !artwork.hideCaption;
   group.userData.labelMesh = label;
-  group.userData.imageMesh = image;
   group.userData.artwork = artwork;
   scene.add(group);
   return group;
@@ -583,13 +584,6 @@ function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoor
     bay.position.set(0, ROOM.height - 0.035, corridorStart + 1.4 + index * 1.8);
     scene.add(bay);
   }
-  const wayfinding = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.15, 0.31),
-    new THREE.MeshBasicMaterial({ map: makeWayfindingTexture(), transparent: true }),
-  );
-  wayfinding.position.set(-ROOM.width / 2 + 0.1, 3.2, ROOM.depth / 2 - 0.18);
-  wayfinding.rotation.y = Math.PI / 2;
-  scene.add(wayfinding);
   const railMaterial = makeMaterial(0x292826, 0.3, 0.4);
   const rail = new THREE.Mesh(new THREE.BoxGeometry(ROOM.width - 2.2, 0.04, 0.05), railMaterial);
   rail.position.set(0, ROOM.height - 0.26, -0.15);
@@ -623,13 +617,16 @@ function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoor
   addWall(scene, new THREE.BoxGeometry(0.18, ROOM.height, 11), [-ROOM.width / 2, ROOM.height / 2, 39.7], wallMaterial);
   addWall(scene, new THREE.BoxGeometry(0.18, ROOM.height, 11), [ROOM.width / 2, ROOM.height / 2, 39.7], wallMaterial);
   addSegmentedWall(scene, 45.2, ROOM.width, ROOM.height, 3.6, wallMaterial);
+  const room12DoorGroup = new THREE.Group();
+  room12DoorGroup.position.set(0, 0, 45.2);
   const room12Door = new THREE.Mesh(new THREE.BoxGeometry(3.6, 5.7, 0.18), new THREE.MeshStandardMaterial({ color: 0xb2769a, roughness: 0.38, metalness: 0.08 }));
-  room12Door.position.set(0, 2.85, 45.2);
-  scene.add(room12Door);
-  room12DoorRef.current = room12Door;
+  room12Door.position.set(0, 2.85, 0);
+  room12DoorGroup.add(room12Door);
   const room12Lock = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.52, 0.08), new THREE.MeshStandardMaterial({ color: 0x9a7b56, roughness: 0.28, metalness: 0.5 }));
-  room12Lock.position.set(0, 2.6, 45.08);
-  scene.add(room12Lock);
+  room12Lock.position.set(0, 2.6, -0.12);
+  room12DoorGroup.add(room12Lock);
+  scene.add(room12DoorGroup);
+  room12DoorRef.current = room12DoorGroup;
   [-4.8, -2.88, -0.96, 0.96, 2.88, 4.8].forEach((offset, index) => {
     buildArtwork({ ...roomSource(11, index * 2), id: `room-11-west-${index + 1}`, index: `11.W${index + 1} / 12`, position: [-ROOM.width / 2 + 0.12, 3.35, 39.7 + offset], rotationY: Math.PI / 2, width: 1.5, height: 1.72, wall: "left" }, scene, interactive, true);
     buildArtwork({ ...roomSource(11, index * 2 + 1), id: `room-11-east-${index + 1}`, index: `11.E${index + 1} / 12`, position: [ROOM.width / 2 - 0.12, 3.35, 39.7 + offset], rotationY: -Math.PI / 2, width: 1.5, height: 1.72, wall: "right" }, scene, interactive, true);
@@ -637,7 +634,9 @@ function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoor
   const room12Label = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.42), new THREE.MeshBasicMaterial({ map: makeRoomLabelTexture(12, 0xb2769a), transparent: true }));
   room12Label.position.set(0, 3.4, 45.0);
   scene.add(room12Label);
-  const finalFloor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.width, 11), floorMaterial);
+  const room12WallMaterial = new THREE.MeshStandardMaterial({ color: 0x80655c, roughness: 0.92, metalness: 0 });
+  const room12FloorMaterial = makeMaterial(0x574841, 0.52, 0.04);
+  const finalFloor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.width, 11), room12FloorMaterial);
   finalFloor.rotation.x = -Math.PI / 2;
   finalFloor.position.set(0, 0, 50.7);
   scene.add(finalFloor);
@@ -645,18 +644,97 @@ function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoor
   finalCeiling.rotation.x = Math.PI / 2;
   finalCeiling.position.set(0, ROOM.height, 50.7);
   scene.add(finalCeiling);
-  addWall(scene, new THREE.BoxGeometry(0.18, ROOM.height, 11), [-ROOM.width / 2, ROOM.height / 2, 50.7], wallMaterial);
-  addWall(scene, new THREE.BoxGeometry(0.18, ROOM.height, 11), [ROOM.width / 2, ROOM.height / 2, 50.7], wallMaterial);
-  addWall(scene, new THREE.BoxGeometry(ROOM.width, ROOM.height, 0.18), [0, ROOM.height / 2, 56.2], wallMaterial);
-  [-4.35, 0, 4.35].forEach((offset, index) => {
-    buildArtwork({ ...roomSource(12, index === 1 ? 4 : index), id: `room-12-south-${index + 1}`, index: `12.S${index + 1} / 07`, position: [offset, 3.35, 56.08], rotationY: Math.PI, width: 2.1, height: 2.35, wall: "primary" }, scene, interactive, true);
+  addWall(scene, new THREE.BoxGeometry(0.18, ROOM.height, 11), [-ROOM.width / 2, ROOM.height / 2, 50.7], room12WallMaterial);
+  addWall(scene, new THREE.BoxGeometry(0.18, ROOM.height, 11), [ROOM.width / 2, ROOM.height / 2, 50.7], room12WallMaterial);
+  addWall(scene, new THREE.BoxGeometry(ROOM.width, ROOM.height, 0.18), [0, ROOM.height / 2, 56.2], room12WallMaterial);
+  const tableMaterial = makeMaterial(0x3b3638, 0.38, 0.18);
+  const cakePlate = new THREE.Mesh(new THREE.CylinderGeometry(1.28, 1.28, 0.08, 48), makeMaterial(0xe8e0d8, 0.48));
+  cakePlate.position.set(0, 1.38, 52.55);
+  scene.add(cakePlate);
+  const tableTop = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.22, 2.55), tableMaterial);
+  tableTop.position.set(0, 1.1, 52.55);
+  scene.add(tableTop);
+  [-1.75, 1.75].forEach((x) => [-0.88, 0.88].forEach((z) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.2), tableMaterial);
+    leg.position.set(x, 0.55, 52.55 + z);
+    scene.add(leg);
+  }));
+  const cakeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.95, 0.48, 32), makeMaterial(0xb99ac1, 0.58));
+  cakeBase.position.set(0, 1.66, 52.55);
+  cakeBase.userData.cake = true;
+  scene.add(cakeBase);
+  const cakeTop = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.78, 0.24, 32), makeMaterial(0xf1e7df, 0.56));
+  cakeTop.position.set(0, 2.02, 52.55);
+  cakeTop.userData.cake = true;
+  scene.add(cakeTop);
+  const cakeMiddle = new THREE.Mesh(new THREE.CylinderGeometry(0.53, 0.58, 0.2, 32), makeMaterial(0xd4b9d5, 0.56));
+  cakeMiddle.position.set(0, 2.24, 52.55);
+  cakeMiddle.userData.cake = true;
+  scene.add(cakeMiddle);
+  const candleMaterial = makeMaterial(0xc6a96c, 0.42, 0.15);
+  const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xdba66b });
+  [-0.19, 0.19].forEach((x) => {
+    const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.38, 12), candleMaterial);
+    candle.position.set(x, 2.49, 52.55);
+    candle.userData.cake = true;
+    scene.add(candle);
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), flameMaterial.clone());
+    flame.position.set(x, 2.74, 52.55);
+    flame.scale.set(0.45, 0.85, 0.45);
+    flame.userData.cake = true;
+    flame.userData.candleFlame = true;
+    scene.add(flame);
   });
-  [-3.65, 3.65].forEach((offset, index) => {
-    buildArtwork({ ...roomSource(12, 1 + index), id: `room-12-west-${index + 1}`, index: `12.W${index + 1} / 07`, position: [-ROOM.width / 2 + 0.12, 3.35, 50.7 + offset], rotationY: Math.PI / 2, width: 1.5, height: 1.72, wall: "left" }, scene, interactive, true);
-    buildArtwork({ ...roomSource(12, 2 + index), id: `room-12-east-${index + 1}`, index: `12.E${index + 1} / 07`, position: [ROOM.width / 2 - 0.12, 3.35, 50.7 + offset], rotationY: -Math.PI / 2, width: 1.5, height: 1.72, wall: "right" }, scene, interactive, true);
+  const promptCanvas = document.createElement("canvas");
+  promptCanvas.width = 620; promptCanvas.height = 120;
+  const promptContext = promptCanvas.getContext("2d");
+  if (promptContext) {
+    promptContext.fillStyle = "rgba(52, 48, 52, 0.86)";
+    promptContext.roundRect(2, 2, 616, 116, 24); promptContext.fill();
+    promptContext.fillStyle = "#f4e7d8"; promptContext.font = "600 28px DM Sans, sans-serif"; promptContext.textAlign = "center";
+    promptContext.fillText("CLICK ME OR SUM", 310, 73);
+  }
+  const cakePrompt = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 0.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(promptCanvas), transparent: true }));
+  cakePrompt.position.set(0, 2.95, 51.78);
+  cakePrompt.userData.cake = true;
+  scene.add(cakePrompt);
+  const runner = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.025, 2.58), makeMaterial(0xd9cedb, 0.82));
+  runner.position.set(0, 1.225, 52.55);
+  scene.add(runner);
+  const ribbonMaterial = makeMaterial(0xb49cbd, 0.58);
+  const ribbonBand = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.035, 2.62), ribbonMaterial);
+  ribbonBand.position.set(0, 1.245, 52.55);
+  scene.add(ribbonBand);
+  [-1, 1].forEach((side) => {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.045, 8, 18, Math.PI * 1.55), ribbonMaterial);
+    loop.position.set(side * 0.22, 1.38, 52.55);
+    loop.rotation.set(Math.PI / 2, side * 0.2, side * 0.55);
+    scene.add(loop);
   });
-  addMuseumBench(scene, [0, 0, 52.95]);
-  addGalleryAccent(scene, interactive, -5.5, 54.75, 0xb2769a);
+  const cardMaterial = makeMaterial(0xf0e9df, 0.9);
+  [-1.25, 1.35].forEach((x, index) => {
+    const card = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.035, 0.58), cardMaterial);
+    card.position.set(x, 1.27, 52.55 + (index ? -0.3 : 0.25));
+    card.rotation.y = index ? -0.16 : 0.11;
+    scene.add(card);
+  });
+  const confettiColors = [0xb49cbd, 0xc7ad72, 0x9aa9ab, 0xd7c3b2];
+  for (let index = 0; index < 36; index += 1) {
+    const fleck = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.018, 0.025), makeMaterial(confettiColors[index % confettiColors.length], 0.55));
+    fleck.position.set(-1.95 + ((index * 0.73) % 3.9), 1.245, 51.62 + ((index * 0.41) % 1.85));
+    fleck.rotation.y = index * 0.7;
+    scene.add(fleck);
+  }
+  [-6.3, -5.65, -5.0, -4.35, -3.7, -3.05, -2.4, -1.75, -1.1, -0.45, 0.2, 0.85, 1.5, 2.15, 2.8, 3.45, 4.1, 4.75, 5.4, 6.05, -6.0, -4.7, -3.4, -2.1, -0.8, 0.5, 1.8, 3.1, 4.4, 5.7, -5.35, -4.05, -2.75, -1.45, -0.15, 1.15].forEach((x, index) => {
+    const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), new THREE.MeshBasicMaterial({ color: index % 3 === 0 ? 0xe2d3b9 : index % 3 === 1 ? 0xd4c1d9 : 0xc4d0cb, transparent: true, opacity: 0.62 }));
+    lantern.position.set(x, 5.18 + (index % 3) * 0.26, 50.7 + (index % 4) * 1.45);
+    lantern.scale.set(0.82, 1.12, 0.82);
+    scene.add(lantern);
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.72, 6), new THREE.MeshBasicMaterial({ color: 0x756b70, transparent: true, opacity: 0.45 }));
+    cord.position.set(x, 5.68 + (index % 3) * 0.26, 50.7 + (index % 4) * 1.45);
+    scene.add(cord);
+  });
+  interactive.push(cakeBase, cakeTop, cakeMiddle, cakePrompt);
 }
 
 function buildSideRooms(scene: THREE.Scene, interactive: THREE.Object3D[]) {
@@ -789,7 +867,7 @@ function buildExtendedRooms(scene: THREE.Scene, interactive: THREE.Object3D[]) {
     else addWall(scene, new THREE.BoxGeometry(roomW, ROOM.height, 0.18), [layout.x, ROOM.height / 2, top], wallMaterial);
     if (layout.openings.some((direction) => String(direction) === "south")) addSegmentedWall(scene, bottom, roomW, ROOM.height, roomOpening, wallMaterial);
     else addWall(scene, new THREE.BoxGeometry(roomW, ROOM.height, 0.18), [layout.x, ROOM.height / 2, bottom], wallMaterial);
-    if (layout.openings.some((direction) => String(direction) === "east")) addSideSegmentedWall(scene, right, layout.z, roomD, ROOM.height, roomOpening, wallMaterial, true);
+    if (layout.openings.some((direction) => String(direction) === "east") && layout.room !== 2 && layout.room !== 3) addSideSegmentedWall(scene, right, layout.z, roomD, ROOM.height, roomOpening, wallMaterial, true);
     if (layout.openings.some((direction) => String(direction) === "west")) addSideSegmentedWall(scene, left, layout.z, roomD, ROOM.height, roomOpening, wallMaterial, false);
 
     addRoomThreshold(scene, layout.x, layout.z, palette.accent, layout.openings, roomW, roomD, roomOpening, charcoal);
@@ -1035,7 +1113,16 @@ function buildLighting(scene: THREE.Scene) {
   addRoomLighting(scene, 0, 0, ROOM.width, ROOM.depth);
   [...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT].forEach((layout) => addRoomLighting(scene, layout.x, layout.z, EXTENDED_ROOM.width, EXTENDED_ROOM.depth));
   addRoomLighting(scene, 0, 39.7, ROOM.width, 11);
-  addRoomLighting(scene, 0, 50.7, ROOM.width, 11);
+  const room12Spot = new THREE.SpotLight(0xffb675, 2.35, 11, 0.76, 0.98, 1.5);
+  room12Spot.position.set(0, 5.9, 52.7);
+  room12Spot.target.position.set(0, 0.8, 52.7);
+  scene.add(room12Spot, room12Spot.target);
+  const room12Warmth = new THREE.PointLight(0xffad6b, 4.25, 9.5, 1.9);
+  room12Warmth.position.set(0, 5.65, 52.7);
+  scene.add(room12Warmth);
+  const room12Fill = new THREE.HemisphereLight(0xffd2aa, 0x4a3b34, 0.1);
+  room12Fill.position.set(0, 4, 52.7);
+  scene.add(room12Fill);
 
   for (let index = 0; index < 3; index += 1) {
     const corridorLight = new THREE.SpotLight(0xffead7, 8, 8.5, 0.58, 0.95, 1.05);
@@ -1046,17 +1133,22 @@ function buildLighting(scene: THREE.Scene) {
 
 }
 
+const BASE_RECTS = [
+  { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: -ROOM.depth / 2 + 0.78, maxZ: ROOM.depth / 2 + 0.25 },
+  { minX: -39.5, maxX: -7.22, minZ: -SIDE_ROOM.depth / 2 + 0.78, maxZ: SIDE_ROOM.depth / 2 - 0.78 },
+  { minX: ROOM.width / 2 - 0.78, maxX: 29.0, minZ: -SIDE_ROOM.depth / 2 + 0.78, maxZ: SIDE_ROOM.depth / 2 - 0.78 },
+  { minX: -CORRIDOR.width / 2 + 0.62, maxX: CORRIDOR.width / 2 - 0.62, minZ: ROOM.depth / 2 - 0.5, maxZ: ROOM.depth / 2 + CORRIDOR.depth + 0.25 },
+  { minX: 6.95, maxX: 8.85, minZ: 27.2, maxZ: 30.2 },
+  { minX: -8.55, maxX: -6.5, minZ: 12.5, maxZ: 23.0 },
+  ...[...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT.filter((layout) => layout.room !== 4 && layout.room !== 10)].map((layout) => ({ minX: layout.x - EXTENDED_ROOM.width / 2 + 0.78, maxX: layout.x + EXTENDED_ROOM.width / 2 - 0.78, minZ: layout.z - EXTENDED_ROOM.depth / 2 - 0.25, maxZ: layout.z + EXTENDED_ROOM.depth / 2 + 0.25 })),
+];
+const SECRET_RECT = { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 34.0, maxZ: 45.0 };
+const FINAL_RECT = { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 45.0, maxZ: 55.42 };
+
 function clampInterior(position: THREE.Vector3, includeSecret = false, includeFinal = false) {
-  const rects = [
-    { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: -ROOM.depth / 2 + 0.78, maxZ: ROOM.depth / 2 + 0.25 },
-    { minX: -39.5, maxX: -7.22, minZ: -SIDE_ROOM.depth / 2 + 0.78, maxZ: SIDE_ROOM.depth / 2 - 0.78 },
-    { minX: ROOM.width / 2 - 0.78, maxX: 29.0, minZ: -SIDE_ROOM.depth / 2 + 0.78, maxZ: SIDE_ROOM.depth / 2 - 0.78 },
-    { minX: -CORRIDOR.width / 2 + 0.62, maxX: CORRIDOR.width / 2 - 0.62, minZ: ROOM.depth / 2 - 0.5, maxZ: ROOM.depth / 2 + CORRIDOR.depth + 0.25 },
-    { minX: 6.95, maxX: 8.85, minZ: 27.2, maxZ: 30.2 },
-    ...[...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT].map((layout) => ({ minX: layout.x - EXTENDED_ROOM.width / 2 + 0.78, maxX: layout.x + EXTENDED_ROOM.width / 2 - 0.78, minZ: layout.z - EXTENDED_ROOM.depth / 2 - 0.25, maxZ: layout.z + EXTENDED_ROOM.depth / 2 + 0.25 })),
-    ...(includeSecret ? [{ minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 34.0, maxZ: 44.42 }] : []),
-    ...(includeFinal ? [{ minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 45.0, maxZ: 55.42 }] : []),
-  ];
+  const rects = includeSecret || includeFinal
+    ? [...BASE_RECTS, ...(includeSecret ? [SECRET_RECT] : []), ...(includeFinal ? [FINAL_RECT] : [])]
+    : BASE_RECTS;
   const containing = rects.find((rect) => position.x >= rect.minX && position.x <= rect.maxX && position.z >= rect.minZ && position.z <= rect.maxZ);
   const target = containing ?? rects.reduce((closest, rect) => {
     const dx = Math.max(rect.minX - position.x, 0, position.x - rect.maxX);
@@ -1084,14 +1176,19 @@ export default function MuseumExperience() {
   const [hoveredArtwork, setHoveredArtwork] = useState<Artwork | null>(null);
   const [complimentVisible, setComplimentVisible] = useState(false);
   const [hasExplored, setHasExplored] = useState(false);
+  const hasExploredRef = useRef(false);
   const [isAdmissionOpen, setIsAdmissionOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [currentRoom, setCurrentRoom] = useState("ROOM 01");
   const [mapPlayer, setMapPlayer] = useState({ x: 0, z: 4.35, yaw: 0 });
-  const [visitedRooms, setVisitedRooms] = useState<string[]>([]);
+  const [visitedRooms, setVisitedRooms] = useState<string[]>(["01", "02"]);
+  const [framesLoaded, setFramesLoaded] = useState(false);
   const [guide, setGuide] = useState({ arrow: "↑", label: "ROOM 02" });
   const [secretUnlocked, setSecretUnlocked] = useState(false);
   const [showUnlockNotice, setShowUnlockNotice] = useState(false);
+  const [isLetterOpen, setIsLetterOpen] = useState(false);
+  const [letterText, setLetterText] = useState("");
+  const [cakePromptVisible, setCakePromptVisible] = useState(false);
   // Add-frame flow: pick a photo/video -> fill in the caption card -> click a
   // wall to place it. pendingFrameMedia holds the file while the details form
   // is open; pendingFramePlacementRef is what "click a wall" actually reads.
@@ -1103,7 +1200,7 @@ export default function MuseumExperience() {
   const [movingFrameId, setMovingFrameId] = useState<string | null>(null);
   const movingFrameIdRef = useRef<string | null>(null);
   const [editDetails, setEditDetails] = useState<FrameDetailsForm>({ title: "", note: "", year: "" });
-  const visitedRoomsRef = useRef(new Set<string>());
+  const visitedRoomsRef = useRef(new Set<string>(["01", "02"]));
   const secretUnlockedRef = useRef(false);
   const customFrameGroupsRef = useRef(new Map<string, THREE.Group>());
   const secretDoorRef = useRef<THREE.Object3D | null>(null);
@@ -1115,15 +1212,35 @@ export default function MuseumExperience() {
     setEditDetails({ title: selectedArtwork.title, note: selectedArtwork.note, year: selectedArtwork.year });
   }, [selectedArtwork]);
 
-  const armNewFrame = (file: File | undefined) => {
+  useEffect(() => {
+    fetch("/api/frames")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((serverFrames) => {
+        if (Array.isArray(serverFrames) && serverFrames.length) {
+          window.localStorage.setItem(SAVED_FRAMES_KEY, JSON.stringify(serverFrames));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setFramesLoaded(true));
+  }, []);
+
+  const armNewFrame = async (file: File | undefined) => {
     if (!file || (!file.type.startsWith("image/") && !file.type.startsWith("video/"))) return;
     const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPendingFrameMedia({ dataUrl: String(reader.result), kind, name: file.name });
-      setPendingFrameDetails({ title: "", note: "", year: String(new Date().getFullYear()) });
-    };
-    reader.readAsDataURL(file);
+    const localUrl = URL.createObjectURL(file);
+    setPendingFrameMedia({ dataUrl: localUrl, kind, name: file.name });
+    setPendingFrameDetails({ title: "", note: "", year: String(new Date().getFullYear()) });
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      setPendingFrameMedia({ dataUrl: url, kind, name: file.name });
+    } catch {
+      window.alert("Upload failed. Check that the dev server is running.");
+      setPendingFrameMedia(null);
+    }
   };
 
   const cancelPendingFrame = () => {
@@ -1169,6 +1286,20 @@ export default function MuseumExperience() {
     persistSelectedFrameTransform(group);
   };
 
+  const nudgeCustomFrame = (axis: "x" | "y" | "z", delta: number) => {
+    if (!selectedArtwork?.custom) return;
+    const group = customFrameGroupsRef.current.get(selectedArtwork.id);
+    if (!group) return;
+    group.position[axis] += delta;
+    const updated: Artwork = {
+      ...selectedArtwork,
+      position: [group.position.x, group.position.y, group.position.z],
+    };
+    group.userData.artwork = updated;
+    persistFrame(selectedArtwork.id, { position: updated.position });
+    setSelectedArtwork(updated);
+  };
+
   const startMoveFrame = () => {
     if (!selectedArtwork?.custom) return;
     movingFrameIdRef.current = selectedArtwork.id;
@@ -1186,12 +1317,7 @@ export default function MuseumExperience() {
     const nextHidden = !selectedArtwork.hideCaption;
     const label = group?.userData.labelMesh as THREE.Mesh | undefined;
     if (label) label.visible = !nextHidden;
-    if (group) {
-      const nextArtwork = { ...(group.userData.artwork as Artwork), hideCaption: nextHidden };
-      group.userData.artwork = nextArtwork;
-      const image = group.userData.imageMesh as THREE.Object3D | undefined;
-      if (image) image.userData.artwork = nextArtwork;
-    }
+    if (group) group.userData.artwork = { ...(group.userData.artwork as Artwork), hideCaption: nextHidden };
     persistFrame(selectedArtwork.id, { hideCaption: nextHidden });
     setSelectedArtwork({ ...selectedArtwork, hideCaption: nextHidden });
   };
@@ -1207,11 +1333,7 @@ export default function MuseumExperience() {
       label.material.map = texture;
       label.material.needsUpdate = true;
     }
-    if (group) {
-      group.userData.artwork = nextArtwork;
-      const image = group.userData.imageMesh as THREE.Object3D | undefined;
-      if (image) image.userData.artwork = nextArtwork;
-    }
+    if (group) group.userData.artwork = nextArtwork;
     persistFrame(selectedArtwork.id, { title: nextArtwork.title, note: nextArtwork.note, year: nextArtwork.year });
     setSelectedArtwork(nextArtwork);
   };
@@ -1228,28 +1350,53 @@ export default function MuseumExperience() {
   };
 
   useEffect(() => {
+    if (!framesLoaded) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf6f3f5);
-    scene.fog = new THREE.Fog(0xf6f3f5, 22, 70);
+    scene.fog = new THREE.Fog(0xf6f3f5, 12, 38);
 
-    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 85);
+    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 85);
     camera.position.set(0, EYE_HEIGHT, 4.35);
+    camera.rotation.order = "YXZ";
     camera.rotation.set(-0.035, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(1);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = false;
+    renderer.shadowMap.autoUpdate = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.04;
+    renderer.toneMapping = THREE.NoToneMapping;
 
     const interactive: THREE.Object3D[] = [];
     buildRoom(scene, interactive, secretDoorRef, room12DoorRef);
     buildLighting(scene);
+    // Janitor's closet sign on room 4 door
+    const janitorsCanvas = document.createElement("canvas");
+    janitorsCanvas.width = 512; janitorsCanvas.height = 160;
+    const jctx = janitorsCanvas.getContext("2d");
+    if (jctx) {
+      jctx.fillStyle = "#2b2927"; jctx.fillRect(0, 0, 512, 160);
+      jctx.fillStyle = "#f1eee8"; jctx.font = "bold 36px sans-serif"; jctx.textAlign = "center";
+      jctx.fillText("JANITOR'S CLOSET", 256, 60);
+      jctx.fillStyle = "#77736d"; jctx.font = "22px sans-serif";
+      jctx.fillText("Staff only. No public access.", 256, 105);
+      jctx.fillStyle = "#c2b4d8"; jctx.fillRect(180, 128, 152, 3);
+    }
+    const janitorsTexture = new THREE.CanvasTexture(janitorsCanvas);
+    janitorsTexture.colorSpace = THREE.SRGBColorSpace;
+    const janitorsSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.2, 0.7),
+      new THREE.MeshBasicMaterial({ map: janitorsTexture, transparent: true })
+    );
+    janitorsSign.position.set(-7.6, 3.2, 17.7);
+    janitorsSign.rotation.y = Math.PI / 2;
+    scene.add(janitorsSign);
+
     customFrameGroupsRef.current.clear();
     readSavedFrames().forEach((savedFrame) => {
       const group = buildArtwork(savedFrame, scene, interactive);
@@ -1279,8 +1426,10 @@ export default function MuseumExperience() {
     let lastNearbyScan = 0;
     let lastGuideKey = "";
 
-    const facingDirection = () => new THREE.Vector3(-Math.sin(targetYaw.value), 0, -Math.cos(targetYaw.value));
-    const strafeDirection = () => new THREE.Vector3(Math.cos(targetYaw.value), 0, -Math.sin(targetYaw.value));
+    const _facing = new THREE.Vector3();
+    const _strafe = new THREE.Vector3();
+    const facingDirection = () => _facing.set(-Math.sin(targetYaw.value), 0, -Math.cos(targetYaw.value));
+    const strafeDirection = () => _strafe.set(Math.cos(targetYaw.value), 0, -Math.sin(targetYaw.value));
 
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -1288,7 +1437,7 @@ export default function MuseumExperience() {
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
         event.preventDefault();
         keys.add(event.code);
-        setHasExplored(true);
+        if (!hasExploredRef.current) { hasExploredRef.current = true; setHasExplored(true); }
       }
     };
 
@@ -1330,7 +1479,7 @@ export default function MuseumExperience() {
           clampInterior(targetPosition, true, secretUnlockedRef.current);
         }
         pinchDistance = nextDistance;
-        setHasExplored(true);
+        if (!hasExploredRef.current) { hasExploredRef.current = true; setHasExplored(true); }
         return;
       }
       if (!previous) return;
@@ -1340,7 +1489,7 @@ export default function MuseumExperience() {
       targetYaw.value -= dx * 0.00245;
       lastX = event.clientX;
       lastY = event.clientY;
-      setHasExplored(true);
+      if (!hasExploredRef.current) { hasExploredRef.current = true; setHasExplored(true); }
     };
 
     const onPointerUp = (event: PointerEvent) => {
@@ -1353,8 +1502,10 @@ export default function MuseumExperience() {
         pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
         pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
         raycaster.setFromCamera(pointer, camera);
-        const hit = raycaster.intersectObjects(scene.children, true).find((intersection) => intersection.object.userData.artworkId || intersection.object.userData.galleryWall);
-        if (hit?.object.userData.galleryWall && movingFrameIdRef.current) {
+        const hit = raycaster.intersectObjects(scene.children, true).find((intersection) => intersection.object.userData.cake || intersection.object.userData.artworkId || intersection.object.userData.galleryWall);
+        if (hit?.object.userData.cake) {
+          setIsLetterOpen(true);
+        } else if (hit?.object.userData.galleryWall && movingFrameIdRef.current) {
           const movingId = movingFrameIdRef.current;
           const group = customFrameGroupsRef.current.get(movingId);
           if (group) {
@@ -1367,8 +1518,6 @@ export default function MuseumExperience() {
             const current = group.userData.artwork as Artwork;
             const updated: Artwork = { ...current, position: [position.x, position.y, position.z], rotationY };
             group.userData.artwork = updated;
-            const image = group.userData.imageMesh as THREE.Object3D | undefined;
-            if (image) image.userData.artwork = updated;
             persistFrame(movingId, { position: updated.position, rotationY });
             setSelectedArtwork(updated);
           }
@@ -1417,14 +1566,14 @@ export default function MuseumExperience() {
       event.preventDefault();
       targetPosition.add(facingDirection().multiplyScalar(-event.deltaY * 0.0023));
       clampInterior(targetPosition, true, secretUnlockedRef.current);
-      setHasExplored(true);
+      if (!hasExploredRef.current) { hasExploredRef.current = true; setHasExplored(true); }
     };
 
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(1);
     };
 
     canvas.addEventListener("pointerdown", onPointerDown);
@@ -1440,27 +1589,31 @@ export default function MuseumExperience() {
     let lastRenderTime = 0;
     const animate = (time = 0) => {
       frame = window.requestAnimationFrame(animate);
-      if (time - lastRenderTime < 33.33) return;
+      if (time - lastRenderTime < 16) return;
       lastRenderTime = time;
       if (mapTargetRef.current) {
         targetPosition.set(mapTargetRef.current.x, EYE_HEIGHT, mapTargetRef.current.z);
         clampInterior(targetPosition, true, secretUnlockedRef.current);
         mapTargetRef.current = null;
-        setHasExplored(true);
+        if (!hasExploredRef.current) { hasExploredRef.current = true; setHasExplored(true); }
       }
       const forward = keys.has("KeyW") || keys.has("ArrowUp") ? 1 : keys.has("KeyS") || keys.has("ArrowDown") ? -1 : 0;
       const strafe = keys.has("KeyD") || keys.has("ArrowRight") ? 1 : keys.has("KeyA") || keys.has("ArrowLeft") ? -1 : 0;
       if (forward || strafe) {
-        const moveSpeed = reducedMotion ? 0.11 : 0.072;
+        const moveSpeed = reducedMotion ? 0.14 : 0.14;
         targetPosition.add(facingDirection().multiplyScalar(forward * moveSpeed));
         targetPosition.add(strafeDirection().multiplyScalar(strafe * moveSpeed));
         clampInterior(targetPosition, true, secretUnlockedRef.current);
       }
-      const nearestRoom = ROOM_GUIDE_TARGETS
-        .map((room) => ({ room, distance: Math.hypot(targetPosition.x - room.x, targetPosition.z - room.z) }))
-        .reduce((closest, current) => current.distance < closest.distance ? current : closest, { room: ROOM_GUIDE_TARGETS[0], distance: Number.POSITIVE_INFINITY });
-      if (nearestRoom.distance < 5.8 && !visitedRoomsRef.current.has(nearestRoom.room.id)) {
-        visitedRoomsRef.current.add(nearestRoom.room.id);
+      let nearestRoom = ROOM_GUIDE_TARGETS[0];
+      let nearestDist = Math.hypot(targetPosition.x - nearestRoom.x, targetPosition.z - nearestRoom.z);
+      for (let i = 1; i < ROOM_GUIDE_TARGETS.length; i++) {
+        const r = ROOM_GUIDE_TARGETS[i];
+        const d = Math.hypot(targetPosition.x - r.x, targetPosition.z - r.z);
+        if (d < nearestDist) { nearestDist = d; nearestRoom = r; }
+      }
+      if (nearestDist < 10.5 && !visitedRoomsRef.current.has(nearestRoom.id)) {
+        visitedRoomsRef.current.add(nearestRoom.id);
         setVisitedRooms(Array.from(visitedRoomsRef.current));
         if (visitedRoomsRef.current.size === ROOM_GUIDE_TARGETS.length) {
           secretUnlockedRef.current = true;
@@ -1470,41 +1623,49 @@ export default function MuseumExperience() {
             secretDoorRef.current.parent?.remove(secretDoorRef.current);
             secretDoorRef.current = null;
           }
-          if (room12DoorRef.current) {
-            room12DoorRef.current.parent?.remove(room12DoorRef.current);
-            room12DoorRef.current = null;
-          }
+          if (room12DoorRef.current) room12DoorRef.current.visible = false;
         }
       }
-      const unexplored = ROOM_GUIDE_TARGETS.find((room) => !visitedRoomsRef.current.has(room.id));
-      if (unexplored) {
-        const dx = unexplored.x - targetPosition.x;
-        const dz = unexplored.z - targetPosition.z;
-        const forward = -Math.sin(targetYaw.value) * dx - Math.cos(targetYaw.value) * dz;
+      // Guide follows the fixed order in ROOM_GUIDE_TARGETS
+      // Only recalc guide every 10 frames
+      const nextTarget = ROOM_GUIDE_TARGETS.find((room) => !visitedRoomsRef.current.has(room.id));
+      if (nextTarget) {
+        const dx = nextTarget.x - targetPosition.x;
+        const dz = nextTarget.z - targetPosition.z;
+        const fwd = -Math.sin(targetYaw.value) * dx - Math.cos(targetYaw.value) * dz;
         const right = Math.cos(targetYaw.value) * dx - Math.sin(targetYaw.value) * dz;
-        const angle = Math.atan2(right, forward);
+        const angle = Math.atan2(right, fwd);
         const arrow = Math.abs(angle) < 0.38 ? "↑" : Math.abs(angle) > 2.76 ? "↓" : angle > 0 ? "→" : "←";
-        const nextGuide = { arrow, label: unexplored.label };
-        const guideKey = `${nextGuide.arrow}:${nextGuide.label}`;
+        const guideKey = `${arrow}:${nextTarget.label}`;
         if (guideKey !== lastGuideKey) {
           lastGuideKey = guideKey;
-          setGuide(nextGuide);
+          setGuide({ arrow, label: nextTarget.label });
+        }
+      } else if (!secretUnlockedRef.current) {
+        if (lastGuideKey !== "done") {
+          lastGuideKey = "done";
+          setGuide({ arrow: "↑", label: "HEAD TO ROOM 11" });
         }
       } else {
-        if (lastGuideKey !== "↑:SECRET ROOM 12 UNLOCKED") {
-          lastGuideKey = "↑:SECRET ROOM 12 UNLOCKED";
-          setGuide({ arrow: "↑", label: "SECRET ROOM 12 UNLOCKED" });
+        if (lastGuideKey !== "unlocked") {
+          lastGuideKey = "unlocked";
+          setGuide({ arrow: "✦", label: "ROOM 12 UNLOCKED" });
         }
       }
-      const nextRoomLabel = targetPosition.z > 45 ? "ROOM 12" : nearestRoom.distance < 5.8 ? nearestRoom.room.label : targetPosition.x < -8.2 ? "WEST WING" : targetPosition.x > 8.2 ? "EAST WING" : targetPosition.z < 5.5 ? "ROOM 01" : targetPosition.z < 12.6 ? "CORRIDOR" : "ROOM 03";
+      const nextRoomLabel = targetPosition.z > 45 ? "ROOM 12" : nearestDist < 10.5 ? nearestRoom.label : targetPosition.x < -8.2 ? "WEST WING" : targetPosition.x > 8.2 ? "EAST WING" : targetPosition.z < 5.5 ? "ROOM 01" : targetPosition.z < 12.6 ? "CORRIDOR" : "ROOM 03";
+      if (secretUnlockedRef.current && room12DoorRef.current) {
+        room12DoorRef.current.visible = targetPosition.z <= 45.1;
+      }
       if (nextRoomLabel !== lastRoomLabel) {
         lastRoomLabel = nextRoomLabel;
-        setCurrentRoom(nextRoomLabel);
+        // defer to next microtask so it never blocks the render loop
+        Promise.resolve().then(() => setCurrentRoom(nextRoomLabel));
       }
       const now = performance.now();
-      if (now - lastNearbyScan > 110) {
+      if (now - lastNearbyScan > 300) {
         lastNearbyScan = now;
         let nearCompliment = false;
+        const nearCake = targetPosition.z > 45 && Math.hypot(targetPosition.x, targetPosition.z - 52.55) < 3.8;
         for (const object of interactive) {
           if (object.userData.complimentStatue) {
             const statuePosition = new THREE.Vector3();
@@ -1515,18 +1676,27 @@ export default function MuseumExperience() {
             }
           }
         }
-        setComplimentVisible(nearCompliment);
+        Promise.resolve().then(() => setComplimentVisible(nearCompliment));
+        Promise.resolve().then(() => setCakePromptVisible(nearCake));
       }
-      if (now - lastMapUpdate > 90) {
+      if (now - lastMapUpdate > 500) {
         lastMapUpdate = now;
         setMapPlayer({ x: targetPosition.x, z: targetPosition.z, yaw: targetYaw.value });
       }
-      const positionLerp = reducedMotion ? 0.18 : 0.075;
-      const rotationLerp = reducedMotion ? 0.25 : 0.095;
+      const positionLerp = reducedMotion ? 0.18 : 0.22;
+      const rotationLerp = reducedMotion ? 0.25 : 0.22;
       camera.position.lerp(targetPosition, positionLerp);
       yaw += (targetYaw.value - yaw) * rotationLerp;
-      pitch += (targetPitch.value - pitch) * rotationLerp;
-      camera.rotation.set(pitch, yaw, 0);
+      camera.rotation.order = "YXZ";
+      camera.rotation.set(-0.035, yaw, 0);
+      scene.traverse((object) => {
+        if (!object.userData.candleFlame) return;
+        const flicker = Math.sin(time * 0.014 + object.position.x * 19) * 0.08 + Math.sin(time * 0.027) * 0.05;
+        object.scale.set(0.45 + flicker * 0.22, 0.85 + flicker * 0.7, 0.45 + flicker * 0.16);
+        object.rotation.z = flicker * 0.8;
+        const material = object as THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+        material.material.color.setHSL(0.08, 0.5, 0.61 + flicker * 0.35);
+      });
       renderer.render(scene, camera);
     };
     animate();
@@ -1555,7 +1725,7 @@ export default function MuseumExperience() {
       });
       renderer.dispose();
     };
-  }, []);
+  }, [framesLoaded]);
 
   return (
     <main className="museum-shell" aria-label="Interactive three-room digital museum">
@@ -1570,10 +1740,43 @@ export default function MuseumExperience() {
           </div>
         </header>
 
+        <aside className="birthday-installation" aria-label="Founder’s birthday celebration">
+          <span className="birthday-rule" aria-hidden="true" />
+          <div>
+            <p className="birthday-kicker">A note from the curator</p>
+            <p className="birthday-title">Happy Birthday, Anagha</p>
+          </div>
+        </aside>
+
+        <div className="birthday-balloons birthday-balloons-left" aria-hidden="true">
+          <span className="birthday-balloon balloon-lavender" /><span className="birthday-balloon balloon-ivory" /><span className="birthday-balloon balloon-dusty-blue" />
+          <span className="birthday-strings" />
+        </div>
+        <div className="birthday-balloons birthday-balloons-right" aria-hidden="true">
+          <span className="birthday-balloon balloon-gold" /><span className="birthday-balloon balloon-lavender" />
+          <span className="birthday-strings" />
+        </div>
+
         <div className="museum-room-meta" aria-hidden="true">
           <strong>{currentRoom}</strong>
           <span>{currentRoom === "CORRIDOR" ? "Architectural passage" : "Exhibition space"}</span>
         </div>
+
+        <aside className="mini-map" aria-label="Museum minimap">
+          <div className="mini-map-heading"><span>MUSEUM MAP</span><strong>{visitedRooms.length === ROOM_GUIDE_TARGETS.length ? 11 : visitedRooms.length} / 11</strong></div>
+          <div className="mini-map-frame">
+            <span className="mini-map-route-line mini-map-route-one" />
+            <span className="mini-map-route-line mini-map-route-two" />
+            <span className="mini-map-room mini-map-room-main">01</span>
+            <span className="mini-map-room mini-map-room-corridor">02</span>
+            <span className="mini-map-room mini-map-room-north">03</span>
+            <span className="mini-map-room mini-map-room-west">07–09</span>
+            <span className="mini-map-room mini-map-room-east">05–06</span>
+            <span className="mini-map-room mini-map-room-final">10–11</span>
+            <span className="mini-map-player-dot" style={{ left: `${Math.max(5, Math.min(95, 50 + mapPlayer.x * 2.1))}%`, top: `${Math.max(7, Math.min(93, 16 + mapPlayer.z * 1.55))}%` }} aria-label="Your position" />
+          </div>
+          <div className="mini-map-legend"><span className="mini-map-legend-dot" /> rooms <span className="mini-map-legend-player" /> you</div>
+        </aside>
 
         <div className={`room-guide ${secretUnlocked ? "is-unlocked" : ""}`} aria-live="polite">
           <span className="room-guide-arrow" aria-hidden="true">{guide.arrow}</span>
@@ -1600,87 +1803,7 @@ export default function MuseumExperience() {
           </aside>
         )}
 
-        <aside className="mini-map" aria-label="Gallery map">
-          <div className="mini-map-heading">
-            <span>Gallery map</span>
-            <strong>{currentRoom}</strong>
-          </div>
-          <div className="mini-map-frame" onClick={(event) => {
-            const bounds = event.currentTarget.getBoundingClientRect();
-            const mapX = (event.clientX - bounds.left) / bounds.width;
-            const mapY = (event.clientY - bounds.top) / bounds.height;
-            let x = 0;
-            let z = 4.35;
-            if (mapX > 0.28 && mapX < 0.74 && mapY < 0.30 && secretUnlocked) {
-              z = 50.7;
-            } else if (mapX > 0.28 && mapX < 0.74 && mapY < 0.48) {
-              z = 39.7;
-            } else if (mapX > 0.76 && mapY > 0.48 && mapY < 0.64) {
-              x = 15.5;
-              z = 28.7;
-            } else if (mapX < 0.3) {
-              x = mapY > 0.66 ? -13.25 : mapY > 0.34 ? -23.75 : -34.25;
-              z = 0;
-            } else if (mapX > 0.7) {
-              x = mapY > 0.5 ? 13.25 : 23.75;
-              z = 0;
-            } else if (mapY < 0.28) {
-              x = 0;
-              z = 28.7;
-            } else if (mapY < 0.55) {
-              x = 0;
-              z = 17.7;
-            } else {
-              x = 0;
-              z = 0;
-            }
-            mapTargetRef.current = { x, z };
-          }}>
-            <svg className="mini-map-svg" viewBox="0 0 180 300" role="img" aria-label="Map of Anagha’s exhibition rooms">
-              <g className="mini-map-final-suite">
-                <rect className="mini-map-floor mini-map-room-eleven" x="48" y="95" width="84" height="42" rx="2" />
-                {secretUnlocked && <rect className="mini-map-floor mini-map-room-twelve" x="48" y="46" width="84" height="42" rx="2" />}
-                <rect className="mini-map-floor mini-map-room-ten" x="138" y="145" width="42" height="42" rx="2" />
-                <path className="mini-map-route" d="M90 145 L90 137 M90 95 L90 88 M132 166 L138 166 M90 166 L132 166" />
-                <text className="mini-map-label" x="55" y="121">11</text>
-                {secretUnlocked && <text className="mini-map-label mini-map-secret-label" x="55" y="72">12</text>}
-                <text className="mini-map-label" x="145" y="170">10</text>
-              </g>
-              <g transform="translate(0 145) scale(1 0.66)">
-              <rect className="mini-map-floor mini-map-side-room" x="0" y="161" width="42" height="69" rx="2" />
-              <rect className="mini-map-floor mini-map-side-room" x="0" y="88" width="42" height="69" rx="2" />
-              <rect className="mini-map-floor mini-map-side-room" x="0" y="15" width="42" height="69" rx="2" />
-              <rect className="mini-map-floor" x="48" y="161" width="84" height="69" rx="2" />
-              <rect className="mini-map-floor mini-map-side-room" x="138" y="161" width="42" height="69" rx="2" />
-              <rect className="mini-map-floor mini-map-side-room" x="138" y="88" width="42" height="69" rx="2" />
-              <rect className="mini-map-corridor" x="70" y="126" width="40" height="38" rx="2" />
-              <rect className="mini-map-floor mini-map-room-two" x="48" y="63" width="84" height="63" rx="2" />
-              <rect className="mini-map-floor mini-map-room-three" x="48" y="0" width="84" height="63" rx="2" />
-              <path className="mini-map-route" d="M90 221 L90 165 L90 126 L90 63 L90 9 M48 195 L42 195 M132 195 L138 195 M21 161 L21 84 M159 161 L159 88" />
-              {[{ x: 90, y: 202 }, { x: 21, y: 195 }, { x: 21, y: 122 }, { x: 21, y: 48 }, { x: 159, y: 195 }, { x: 159, y: 122 }, { x: 55, y: 94 }, { x: 125, y: 94 }, { x: 55, y: 31 }, { x: 125, y: 31 }].map((point, index) => (
-                <circle key={index} className="mini-map-art" cx={point.x} cy={point.y} r="3" />
-              ))}
-              <text className="mini-map-label" x="16" y="177">01</text>
-              <text className="mini-map-label" x="16" y="79">02</text>
-              <text className="mini-map-label" x="16" y="16">03</text>
-              <text className="mini-map-label" x="53" y="121">04</text>
-              <text className="mini-map-wing-label" x="8" y="211">07</text>
-              <text className="mini-map-wing-label" x="8" y="138">08</text>
-              <text className="mini-map-wing-label" x="8" y="65">09 ↑</text>
-              <text className="mini-map-wing-label" x="145" y="211">05</text>
-              <text className="mini-map-wing-label" x="145" y="138">06</text>
-              </g>
-            </svg>
-            <span
-              className="mini-map-player"
-              style={{ left: `${4 + Math.max(0, Math.min(1, (mapPlayer.x + 40) / 71)) * 92}%`, top: `${mapPlayer.z >= 28.7 ? 55 - Math.max(0, Math.min(1, (mapPlayer.z - 28.7) / 22)) * 33 : 84 - Math.max(0, Math.min(1, mapPlayer.z / 28.7)) * 18}%`, transform: `translate(-50%, -50%) rotate(${mapPlayer.yaw}rad)` }}
-              aria-hidden="true"
-            >
-              <span />
-            </span>
-          </div>
-          <div className="mini-map-legend"><span className="mini-map-legend-dot" /> artworks <span className="mini-map-legend-player" /> you</div>
-        </aside>
+        
 
         <div className={`explore-hint ${hasExplored ? "is-hidden" : ""}`}>
           <span className="explore-hint-line" aria-hidden="true" />
@@ -1726,6 +1849,19 @@ export default function MuseumExperience() {
         {complimentVisible && (
           <div className="compliment-note" role="status" aria-live="polite">happy birthday!<br /><span>-from jeff, bj, rj, chad, steve and kesha</span></div>
         )}
+        {cakePromptVisible && !isLetterOpen && (
+          <div className="cake-proximity-prompt" role="status" aria-live="polite">
+            <strong>TAP THE CAKE</strong>
+          </div>
+        )}
+
+        {isLetterOpen && (
+          <aside className="birthday-letter" role="dialog" aria-modal="true" aria-labelledby="birthday-letter-title">
+            <button className="artwork-close" type="button" aria-label="Close letter" onClick={() => setIsLetterOpen(false)}>×</button>
+            <textarea aria-label="Birthday note" value={letterText} onChange={(event) => setLetterText(event.target.value)} autoFocus />
+            <button type="button" className="birthday-letter-save" onClick={() => { window.localStorage.setItem("anagha-room-12-letter", letterText); setIsLetterOpen(false); }}>Save letter</button>
+          </aside>
+        )}
 
         {hoveredArtwork && !selectedArtwork && (
           <div className="poster-card poster-card-hover" aria-label={`${hoveredArtwork.title} artwork information`}>
@@ -1758,6 +1894,17 @@ export default function MuseumExperience() {
                 <button type="button" onClick={toggleHideCaption}>{selectedArtwork.hideCaption ? "Show caption card" : "Hide caption card"}</button>
               </div>
               <div className="frame-editor-row"><button type="button" onClick={() => resizeCustomFrame(0.9)}>− Size</button><button type="button" onClick={() => resizeCustomFrame(1.1)}>＋ Size</button></div>
+              <div className="frame-editor-nudge" aria-label="Nudge frame position">
+                <span>Nudge</span>
+                <div className="frame-editor-nudge-grid">
+                  <button type="button" onClick={() => nudgeCustomFrame("y", 0.05)}>↑</button>
+                  <button type="button" onClick={() => nudgeCustomFrame("y", -0.05)}>↓</button>
+                  <button type="button" onClick={() => nudgeCustomFrame("x", -0.05)}>←</button>
+                  <button type="button" onClick={() => nudgeCustomFrame("x", 0.05)}>→</button>
+                  <button type="button" onClick={() => nudgeCustomFrame("z", -0.03)}>in</button>
+                  <button type="button" onClick={() => nudgeCustomFrame("z", 0.03)}>out</button>
+                </div>
+              </div>
               <button type="button" className="frame-delete" onClick={deleteSelectedFrame}>Delete frame</button>
               <small>Saved on this device.</small>
             </div>}
