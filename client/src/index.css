@@ -124,6 +124,13 @@ button { border: 0; }
 .birthday-title { margin: 0; color: #66536c; font-family: "Cormorant Garamond", Georgia, serif; font-size: clamp(18px, 2.2vw, 26px); line-height: 0.9; }
 
 .birthday-balloons { position: absolute; z-index: 2; width: 72px; height: 116px; pointer-events: none; opacity: 0.84; }
+
+.confetti-burst { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
+.confetti-piece { position: absolute; top: -10px; width: 8px; height: 14px; opacity: 0.9; animation: confetti-fall linear forwards; }
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(540deg); opacity: 0.4; }
+}
 .birthday-balloons-left { left: clamp(18px, 7vw, 110px); bottom: clamp(96px, 17vh, 170px); transform: rotate(-7deg); }
 .birthday-balloons-right { right: clamp(18px, 8vw, 128px); bottom: clamp(88px, 14vh, 150px); transform: rotate(9deg) scale(0.82); opacity: 0.68; }
 .birthday-balloon { position: absolute; display: block; width: 30px; height: 38px; border-radius: 52% 48% 50% 50%; box-shadow: inset -6px -5px 8px rgba(53, 37, 58, 0.09), inset 6px 5px 7px rgba(255, 255, 255, 0.28); }

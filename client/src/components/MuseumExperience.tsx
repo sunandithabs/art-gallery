@@ -1180,6 +1180,8 @@ export default function MuseumExperience() {
   const [isAdmissionOpen, setIsAdmissionOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [currentRoom, setCurrentRoom] = useState("ROOM 01");
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiFiredRef = useRef(false);
   const [mapPlayer, setMapPlayer] = useState({ x: 0, z: 4.35, yaw: 0 });
   const [visitedRooms, setVisitedRooms] = useState<string[]>(["01", "02"]);
   const [framesLoaded, setFramesLoaded] = useState(false);
@@ -1669,6 +1671,11 @@ export default function MuseumExperience() {
         lastRoomLabel = nextRoomLabel;
         // defer to next microtask so it never blocks the render loop
         Promise.resolve().then(() => setCurrentRoom(nextRoomLabel));
+        if (nextRoomLabel === "ROOM 12" && !confettiFiredRef.current) {
+          confettiFiredRef.current = true;
+          Promise.resolve().then(() => setShowConfetti(true));
+          setTimeout(() => setShowConfetti(false), 4000);
+        }
       }
       const now = performance.now();
       if (now - lastNearbyScan > 300) {
@@ -1857,6 +1864,23 @@ export default function MuseumExperience() {
 
         {complimentVisible && (
           <div className="compliment-note" role="status" aria-live="polite">happy birthday!<br /><span>-from jeff, bj, rj, chad, steve and kesha</span></div>
+        )}
+        {showConfetti && (
+          <div className="confetti-burst" aria-hidden="true">
+            {Array.from({ length: 60 }).map((_, i) => (
+              <span
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.6}s`,
+                  animationDuration: `${2.4 + Math.random() * 1.6}s`,
+                  background: ["#c8ae7a", "#b9a6c6", "#9aa9ab", "#e8e1d7", "#d98a8a"][i % 5],
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              />
+            ))}
+          </div>
         )}
         {cakePromptVisible && !isLetterOpen && (
           <div className="cake-proximity-prompt" role="status" aria-live="polite">
