@@ -108,6 +108,7 @@ async function startServer() {
     } catch {
       res.status(500).json({ ok: false });
     }
+  });
   app.use(express.static(publicPath));
 
   app.get("*", (_req, res) => {
