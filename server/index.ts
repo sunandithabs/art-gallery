@@ -91,6 +91,23 @@ async function startServer() {
       res.status(500).json({ ok: false });
     }
   });
+
+  const musicPath = path.join(uploadsDir, "music.json");
+  app.get("/api/music", (_req, res) => {
+    if (!fs.existsSync(musicPath)) return res.json({ url: "" });
+    try {
+      res.json(JSON.parse(fs.readFileSync(musicPath, "utf-8")));
+    } catch {
+      res.json({ url: "" });
+    }
+  });
+  app.post("/api/music", express.json({ limit: "1mb" }), (req, res) => {
+    try {
+      fs.writeFileSync(musicPath, JSON.stringify({ url: req.body.url || "" }, null, 2));
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ ok: false });
+    }
   app.use(express.static(publicPath));
 
   app.get("*", (_req, res) => {

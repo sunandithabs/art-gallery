@@ -1182,6 +1182,10 @@ export default function MuseumExperience() {
   const [currentRoom, setCurrentRoom] = useState("ROOM 01");
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiFiredRef = useRef(false);
+  const [musicUrl, setMusicUrl] = useState("");
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(0.4);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [mapPlayer, setMapPlayer] = useState({ x: 0, z: 4.35, yaw: 0 });
   const [visitedRooms, setVisitedRooms] = useState<string[]>(["01", "02"]);
   const [framesLoaded, setFramesLoaded] = useState(false);
@@ -1234,6 +1238,31 @@ export default function MuseumExperience() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch("/api/music")
+      .then((r) => (r.ok ? r.json() : { url: "" }))
+      .then((data) => {
+        if (data && typeof data.url === "string" && data.url) setMusicUrl(data.url);
+      })
+      .catch(() => {});
+  }, []);
+
+  const uploadMusic = async (file: File | undefined) => {
+    if (!file || !file.type.startsWith("audio/")) return;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      setMusicUrl(url);
+      setMusicPlaying(true);
+      fetch("/api/music", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }).catch(() => {});
+    } catch {
+      window.alert("Music upload failed.");
+    }
+  };
 
   const armNewFrame = async (file: File | undefined) => {
     if (!file || (!file.type.startsWith("image/") && !file.type.startsWith("video/"))) return;
@@ -1847,6 +1876,52 @@ export default function MuseumExperience() {
           </div>
         )}
         <button type="button" className="frame-export-tool" onClick={exportSavedFrames}>Export saved frames</button>
+
+        <div className="music-player-tool">
+          {musicUrl && (
+            <audio
+              ref={audioRef}
+              src={musicUrl}
+              loop
+              autoPlay={musicPlaying}
+              onCanPlay={() => { if (audioRef.current) audioRef.current.volume = musicVolume; }}
+            />
+          )}
+          <button
+            type="button"
+            className="music-play-toggle"
+            onClick={() => {
+              if (!musicUrl) return;
+              const next = !musicPlaying;
+              setMusicPlaying(next);
+              if (audioRef.current) {
+                if (next) audioRef.current.play().catch(() => {});
+                else audioRef.current.pause();
+              }
+            }}
+            disabled={!musicUrl}
+          >
+            {musicPlaying ? "⏸ Music" : "▶ Music"}
+          </button>
+          <input
+            type="range"
+            className="music-volume-slider"
+            min={0}
+            max={1}
+            step={0.01}
+            value={musicVolume}
+            onChange={(event) => {
+              const vol = Number(event.target.value);
+              setMusicVolume(vol);
+              if (audioRef.current) audioRef.current.volume = vol;
+            }}
+            aria-label="Music volume"
+          />
+          <label className="music-upload-tool">
+            <span>{musicUrl ? "Change track" : "+ Add music"}</span>
+            <input type="file" accept="audio/*" onChange={(event) => uploadMusic(event.target.files?.[0])} />
+          </label>
+        </div>
 
         {pendingFrameMedia && !isPlacingFrame && (
           <aside className="frame-details-modal" role="dialog" aria-modal="true" aria-labelledby="frame-details-title">

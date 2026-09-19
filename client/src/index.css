@@ -1140,6 +1140,13 @@ button { border: 0; }
 .frame-delete:hover { background: rgba(159, 82, 109, 0.16); }
 
 .frame-export-tool { position: absolute; left: clamp(24px, 4vw, 64px); bottom: clamp(20px, 4vw, 50px); padding: 7px 10px; border: 1px solid rgba(30, 29, 27, 0.16); background: rgba(248, 246, 241, 0.78); color: rgba(30, 29, 27, 0.56); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; pointer-events: auto; }
+
+.music-player-tool { position: absolute; right: clamp(24px, 4vw, 64px); bottom: clamp(20px, 4vw, 50px); display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid rgba(30, 29, 27, 0.16); background: rgba(248, 246, 241, 0.78); pointer-events: auto; }
+.music-play-toggle { border: none; background: transparent; color: rgba(30, 29, 27, 0.7); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.music-play-toggle:disabled { opacity: 0.4; cursor: default; }
+.music-volume-slider { width: 60px; accent-color: #c8ae7a; }
+.music-upload-tool { position: relative; overflow: hidden; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(30, 29, 27, 0.56); cursor: pointer; }
+.music-upload-tool input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .frame-export-tool:hover { color: #80668d; border-color: rgba(128, 102, 141, 0.38); }
 
 /* Add-frame / move-frame prompt pill shown while the click-a-wall flow is armed. */
