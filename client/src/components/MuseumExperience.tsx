@@ -1224,6 +1224,15 @@ export default function MuseumExperience() {
       .finally(() => setFramesLoaded(true));
   }, []);
 
+  useEffect(() => {
+    fetch("/api/letter")
+      .then((r) => (r.ok ? r.json() : { text: "" }))
+      .then((data) => {
+        if (data && typeof data.text === "string" && data.text) setLetterText(data.text);
+      })
+      .catch(() => {});
+  }, []);
+
   const armNewFrame = async (file: File | undefined) => {
     if (!file || (!file.type.startsWith("image/") && !file.type.startsWith("video/"))) return;
     const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
@@ -1859,7 +1868,7 @@ export default function MuseumExperience() {
           <aside className="birthday-letter" role="dialog" aria-modal="true" aria-labelledby="birthday-letter-title">
             <button className="artwork-close" type="button" aria-label="Close letter" onClick={() => setIsLetterOpen(false)}>×</button>
             <textarea aria-label="Birthday note" value={letterText} onChange={(event) => setLetterText(event.target.value)} autoFocus />
-            <button type="button" className="birthday-letter-save" onClick={() => { window.localStorage.setItem("anagha-room-12-letter", letterText); setIsLetterOpen(false); }}>Save letter</button>
+            <button type="button" className="birthday-letter-save" onClick={() => { window.localStorage.setItem("anagha-room-12-letter", letterText); fetch("/api/letter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: letterText }) }).catch(() => {}); setIsLetterOpen(false); }}>Save letter</button>
           </aside>
         )}
 

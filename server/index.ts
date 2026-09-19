@@ -73,6 +73,24 @@ async function startServer() {
       res.status(500).json({ ok: false });
     }
   });
+
+  const letterPath = path.join(uploadsDir, "letter.json");
+  app.get("/api/letter", (_req, res) => {
+    if (!fs.existsSync(letterPath)) return res.json({ text: "" });
+    try {
+      res.json(JSON.parse(fs.readFileSync(letterPath, "utf-8")));
+    } catch {
+      res.json({ text: "" });
+    }
+  });
+  app.post("/api/letter", express.json({ limit: "1mb" }), (req, res) => {
+    try {
+      fs.writeFileSync(letterPath, JSON.stringify({ text: req.body.text || "" }, null, 2));
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ ok: false });
+    }
+  });
   app.use(express.static(publicPath));
 
   app.get("*", (_req, res) => {
