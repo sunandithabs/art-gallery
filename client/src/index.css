@@ -600,6 +600,9 @@ button { border: 0; }
 .birthday-letter textarea:focus { border-color: #80668d; box-shadow: 0 0 0 3px rgba(194, 180, 216, 0.22); }
 .birthday-letter-save { margin-top: 18px; padding: 11px 17px; border: 1px solid rgba(128, 102, 141, 0.38); background: #80668d; color: #fffaf5; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; }
 .birthday-letter-save:hover { background: #6b5278; }
+.birthday-letter-note { margin: 4px 0 0; padding: 4px 2px 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 20px; line-height: 1.7; color: #3c3140; white-space: pre-wrap; }
+.birthday-letter-edit { margin-top: 18px; padding: 9px 14px; border: 1px solid rgba(128, 102, 141, 0.3); background: transparent; color: #80668d; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; }
+.birthday-letter-edit:hover { background: rgba(128, 102, 141, 0.08); }
 @keyframes birthday-letter-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
 .cake-proximity-prompt {

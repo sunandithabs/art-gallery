@@ -1193,6 +1193,7 @@ export default function MuseumExperience() {
   const [secretUnlocked, setSecretUnlocked] = useState(false);
   const [showUnlockNotice, setShowUnlockNotice] = useState(false);
   const [isLetterOpen, setIsLetterOpen] = useState(false);
+  const [isEditingLetter, setIsEditingLetter] = useState(false);
   const [letterText, setLetterText] = useState("");
   const [cakePromptVisible, setCakePromptVisible] = useState(false);
   // Add-frame flow: pick a photo/video -> fill in the caption card -> click a
@@ -1545,6 +1546,7 @@ export default function MuseumExperience() {
         const hit = raycaster.intersectObjects(scene.children, true).find((intersection) => intersection.object.userData.cake || intersection.object.userData.artworkId || intersection.object.userData.galleryWall);
         if (hit?.object.userData.cake) {
           setIsLetterOpen(true);
+          setIsEditingLetter(!letterText.trim());
         } else if (hit?.object.userData.galleryWall && movingFrameIdRef.current) {
           const movingId = movingFrameIdRef.current;
           const group = customFrameGroupsRef.current.get(movingId);
@@ -1962,12 +1964,30 @@ export default function MuseumExperience() {
             <strong>TAP THE CAKE</strong>
           </div>
         )}
-
         {isLetterOpen && (
           <aside className="birthday-letter" role="dialog" aria-modal="true" aria-labelledby="birthday-letter-title">
             <button className="artwork-close" type="button" aria-label="Close letter" onClick={() => setIsLetterOpen(false)}>×</button>
-            <textarea aria-label="Birthday note" value={letterText} onChange={(event) => setLetterText(event.target.value)} autoFocus />
-            <button type="button" className="birthday-letter-save" onClick={() => { window.localStorage.setItem("anagha-room-12-letter", letterText); fetch("/api/letter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: letterText }) }).catch(() => {}); setIsLetterOpen(false); }}>Save letter</button>
+            {isEditingLetter ? (
+              <>
+                <textarea aria-label="Birthday note" value={letterText} onChange={(event) => setLetterText(event.target.value)} autoFocus />
+                <button
+                  type="button"
+                  className="birthday-letter-save"
+                  onClick={() => {
+                    window.localStorage.setItem("anagha-room-12-letter", letterText);
+                    fetch("/api/letter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: letterText }) }).catch(() => {});
+                    setIsEditingLetter(false);
+                  }}
+                >
+                  Save letter
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="birthday-letter-note">{letterText}</p>
+                <button type="button" className="birthday-letter-edit" onClick={() => setIsEditingLetter(true)}>✎ Edit note</button>
+              </>
+            )}
           </aside>
         )}
 
