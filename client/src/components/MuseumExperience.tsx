@@ -177,11 +177,31 @@ function makeLabelTexture(artwork: Artwork) {
   context.fillStyle = "#77736d";
   context.font = "22px DM Sans, sans-serif";
   context.fillText(`${artwork.year}  ·  ${artwork.medium}`, 26, 86);
+  if (artwork.note) {
+    context.fillStyle = "#4a4742";
+    context.font = "italic 19px DM Sans, sans-serif";
+    const words = artwork.note.split(" ");
+    let line = "";
+    let y = 112;
+    const maxWidth = 660;
+    for (const word of words) {
+      const testLine = line ? `${line} ${word}` : word;
+      if (context.measureText(testLine).width > maxWidth && line) {
+        context.fillText(line, 26, y);
+        line = word;
+        y += 22;
+        if (y > 150) break;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line && y <= 150) context.fillText(line, 26, y);
+  }
   context.fillStyle = "#b9a8d2";
-  context.fillRect(26, 124, 36, 4);
+  context.fillRect(26, 158, 36, 4);
   context.fillStyle = "#77736d";
-  context.font = "18px DM Sans, sans-serif";
-    context.fillText("ANAGHA’S ART GALLERY", 80, 128);
+  context.font = "16px DM Sans, sans-serif";
+  context.fillText("ANAGHA’S ART GALLERY", 76, 162);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
@@ -1365,7 +1385,7 @@ export default function MuseumExperience() {
 
   const saveFrameDetails = () => {
     if (!selectedArtwork?.custom) return;
-    const nextArtwork: Artwork = { ...selectedArtwork, title: editDetails.title.trim() || "Untitled", note: editDetails.note.trim(), year: editDetails.year.trim() };
+    const nextArtwork: Artwork = { ...selectedArtwork, title: editDetails.title.trim() || editDetails.note.trim().slice(0, 40) || "Untitled", note: editDetails.note.trim(), year: editDetails.year.trim() };
     const group = customFrameGroupsRef.current.get(selectedArtwork.id);
     const label = group?.userData.labelMesh as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | undefined;
     if (label) {
