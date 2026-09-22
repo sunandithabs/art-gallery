@@ -110,12 +110,8 @@ const ROOM_PALETTES = [
   { wall: 0xffffff, floor: 0xffffff, accent: 0xcbb4d9, light: 0xffe5c2, exposure: 0.96 },
 ];
 const EXTENDED_LAYOUT = [
-  { room: 2, x: 0, z: 17.7, palette: 1, openings: ["north", "south", "west"] },
-  { room: 3, x: 0, z: 28.7, palette: 2, openings: ["north", "east", "south"] },
-] as const;
-const SATELLITE_LAYOUT = [
-  { room: 4, x: -15.5, z: 17.7, palette: 3, openings: ["east"] },
-  { room: 10, x: 15.5, z: 28.7, palette: 5, openings: ["west"] },
+  { room: 2, x: 0, z: 17.7, palette: 1, openings: ["north", "south"] },
+  { room: 3, x: 0, z: 28.7, palette: 2, openings: ["north", "south"] },
 ] as const;
 const EYE_HEIGHT = 2.8;
 const ARCH_HEIGHT = 5.8;
@@ -123,8 +119,6 @@ const ARCH_CLEARANCE = 2.6;
 const ARCH_OPENINGS = [
   { axis: "x", value: -8, center: 0, span: 3.8 },
   { axis: "x", value: 8, center: 0, span: 3.8 },
-  { axis: "x", value: -7.75, center: 17.7, span: 3.8 },
-  { axis: "x", value: 7.75, center: 28.7, span: 3.8 },
   { axis: "z", value: 12.2, center: 0, span: 2.3 },
   { axis: "z", value: 23.2, center: 0, span: 2.3 },
   { axis: "z", value: 34.2, center: 0, span: 2.3 },
@@ -141,6 +135,34 @@ const ROOM_GUIDE_TARGETS = [
   { id: "09", label: "ROOM 09", x: -34.25, z: 0 },
   { id: "11", label: "ROOM 11", x: 0, z: 39.7 },
 ] as const;
+
+// The minimap places every marker (rooms and the player dot) with this same
+// world-to-percent transform, so the map always matches the actual layout
+// instead of drifting out of sync with hand-placed CSS positions.
+function mapPercent(x: number, z: number) {
+  return {
+    left: Math.max(5, Math.min(95, 50 + x * 2.1)),
+    top: Math.max(7, Math.min(93, 16 + z * 1.55)),
+  };
+}
+function guideTarget(id: string) {
+  const target = ROOM_GUIDE_TARGETS.find((room) => room.id === id);
+  return target ? ([target.x, target.z] as const) : ([0, 0] as const);
+}
+function averageTarget(ids: readonly string[]) {
+  const points = ids.map(guideTarget);
+  const x = points.reduce((sum, [px]) => sum + px, 0) / points.length;
+  const z = points.reduce((sum, [, pz]) => sum + pz, 0) / points.length;
+  return [x, z] as const;
+}
+const MINI_MAP_MARKERS = [
+  { label: "01", ...mapPercent(...guideTarget("01")) },
+  { label: "02", ...mapPercent(...guideTarget("02")) },
+  { label: "03", ...mapPercent(...guideTarget("03")) },
+  { label: "05–06", ...mapPercent(...averageTarget(["05", "06"])) },
+  { label: "07–09", ...mapPercent(...averageTarget(["07", "08", "09"])) },
+  { label: "11", ...mapPercent(...guideTarget("11")) },
+];
 
 // Exhibition wall plan: each numbered room is mirrored across the main gallery.
 // The inner wall is the only intentionally empty wall because it contains the
@@ -522,7 +544,7 @@ function addWall(scene: THREE.Scene, geometry: THREE.BufferGeometry, position: [
   return wall;
 }
 
-function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoorRef: { current: THREE.Object3D | null }, room12DoorRef: { current: THREE.Object3D | null }) {
+function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoorRef: { current: THREE.Object3D | null }, room12DoorRef: { current: THREE.Object3D | null }, candleFlames: THREE.Object3D[] = []) {
   const wallMaterial = makeWallMaterial(0xfaf9f7);
   const floorMaterial = makeMaterial(0xffffff, 0.32, 0.04);
   const ceilingMaterial = makeMaterial(0xf6f3f7, 0.92);
@@ -704,6 +726,7 @@ function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoor
     flame.userData.cake = true;
     flame.userData.candleFlame = true;
     scene.add(flame);
+    candleFlames.push(flame);
   });
   const promptCanvas = document.createElement("canvas");
   promptCanvas.width = 620; promptCanvas.height = 120;
@@ -861,7 +884,7 @@ function buildExtendedRooms(scene: THREE.Scene, interactive: THREE.Object3D[]) {
   const hallW = CORRIDOR.width;
   const hallH = ROOM.height;
 
-  [...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT].forEach((layout) => {
+  EXTENDED_LAYOUT.forEach((layout) => {
     const palette = ROOM_PALETTES[layout.palette];
     const roomOpening = layout.room === 2 || layout.room === 3 ? 3.0 : opening;
     const wallMaterial = makeWallMaterial(palette.wall);
@@ -887,8 +910,8 @@ function buildExtendedRooms(scene: THREE.Scene, interactive: THREE.Object3D[]) {
     else addWall(scene, new THREE.BoxGeometry(roomW, ROOM.height, 0.18), [layout.x, ROOM.height / 2, top], wallMaterial);
     if (layout.openings.some((direction) => String(direction) === "south")) addSegmentedWall(scene, bottom, roomW, ROOM.height, roomOpening, wallMaterial);
     else addWall(scene, new THREE.BoxGeometry(roomW, ROOM.height, 0.18), [layout.x, ROOM.height / 2, bottom], wallMaterial);
-    if (layout.openings.some((direction) => String(direction) === "east") && layout.room !== 2 && layout.room !== 3) addSideSegmentedWall(scene, right, layout.z, roomD, ROOM.height, roomOpening, wallMaterial, true);
-    if (layout.openings.some((direction) => String(direction) === "west")) addSideSegmentedWall(scene, left, layout.z, roomD, ROOM.height, roomOpening, wallMaterial, false);
+    // Rooms 2 and 3 no longer have satellite rooms attached, so their east/west
+    // walls are always solid (built above) — no side arches needed here.
 
     addRoomThreshold(scene, layout.x, layout.z, palette.accent, layout.openings, roomW, roomD, roomOpening, charcoal);
     addRoomCeilingBays(scene, layout.x, layout.z, roomW, roomD);
@@ -898,16 +921,6 @@ function buildExtendedRooms(scene: THREE.Scene, interactive: THREE.Object3D[]) {
     label.rotation.y = Math.PI / 2;
     scene.add(label);
   });
-
-  const roomThreeTenConnector = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 3.0), makeMaterial(0xffffff, 0.34, 0.03));
-  roomThreeTenConnector.rotation.x = -Math.PI / 2;
-  roomThreeTenConnector.position.set(7.75, 0, 28.7);
-  roomThreeTenConnector.receiveShadow = true;
-  scene.add(roomThreeTenConnector);
-  const roomThreeTenCeiling = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 3.0), makeMaterial(0xe4e0d8, 0.92));
-  roomThreeTenCeiling.rotation.x = Math.PI / 2;
-  roomThreeTenCeiling.position.set(7.75, ROOM.height, 28.7);
-  scene.add(roomThreeTenCeiling);
 
   // Orthogonal circulation spine: short halls with ceilings and side walls, not a single open tunnel.
   const connectors: Array<{ x: number; z: number; w: number; d: number; horizontal: boolean }> = [];
@@ -1131,7 +1144,7 @@ function buildLighting(scene: THREE.Scene) {
   scene.add(wash, wash.target);
 
   addRoomLighting(scene, 0, 0, ROOM.width, ROOM.depth);
-  [...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT].forEach((layout) => addRoomLighting(scene, layout.x, layout.z, EXTENDED_ROOM.width, EXTENDED_ROOM.depth));
+  EXTENDED_LAYOUT.forEach((layout) => addRoomLighting(scene, layout.x, layout.z, EXTENDED_ROOM.width, EXTENDED_ROOM.depth));
   addRoomLighting(scene, 0, 39.7, ROOM.width, 11);
   const room12Spot = new THREE.SpotLight(0xffb675, 2.35, 11, 0.76, 0.98, 1.5);
   room12Spot.position.set(0, 5.9, 52.7);
@@ -1158,9 +1171,7 @@ const BASE_RECTS = [
   { minX: -39.5, maxX: -7.22, minZ: -SIDE_ROOM.depth / 2 + 0.78, maxZ: SIDE_ROOM.depth / 2 - 0.78 },
   { minX: ROOM.width / 2 - 0.78, maxX: 29.0, minZ: -SIDE_ROOM.depth / 2 + 0.78, maxZ: SIDE_ROOM.depth / 2 - 0.78 },
   { minX: -CORRIDOR.width / 2 + 0.62, maxX: CORRIDOR.width / 2 - 0.62, minZ: ROOM.depth / 2 - 0.5, maxZ: ROOM.depth / 2 + CORRIDOR.depth + 0.25 },
-  { minX: 6.95, maxX: 8.85, minZ: 27.2, maxZ: 30.2 },
-  { minX: -8.55, maxX: -6.5, minZ: 12.5, maxZ: 23.0 },
-  ...[...EXTENDED_LAYOUT, ...SATELLITE_LAYOUT.filter((layout) => layout.room !== 4 && layout.room !== 10)].map((layout) => ({ minX: layout.x - EXTENDED_ROOM.width / 2 + 0.78, maxX: layout.x + EXTENDED_ROOM.width / 2 - 0.78, minZ: layout.z - EXTENDED_ROOM.depth / 2 - 0.25, maxZ: layout.z + EXTENDED_ROOM.depth / 2 + 0.25 })),
+  ...EXTENDED_LAYOUT.map((layout) => ({ minX: layout.x - EXTENDED_ROOM.width / 2 + 0.78, maxX: layout.x + EXTENDED_ROOM.width / 2 - 0.78, minZ: layout.z - EXTENDED_ROOM.depth / 2 - 0.25, maxZ: layout.z + EXTENDED_ROOM.depth / 2 + 0.25 })),
 ];
 const SECRET_RECT = { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 34.0, maxZ: 45.0 };
 const FINAL_RECT = { minX: -ROOM.width / 2 + 0.78, maxX: ROOM.width / 2 - 0.78, minZ: 45.0, maxZ: 55.42 };
@@ -1215,6 +1226,7 @@ export default function MuseumExperience() {
   const [isLetterOpen, setIsLetterOpen] = useState(false);
   const [isEditingLetter, setIsEditingLetter] = useState(false);
   const [letterText, setLetterText] = useState("");
+  const letterTextRef = useRef("");
   const [cakePromptVisible, setCakePromptVisible] = useState(false);
   // Add-frame flow: pick a photo/video -> fill in the caption card -> click a
   // wall to place it. pendingFrameMedia holds the file while the details form
@@ -1238,6 +1250,13 @@ export default function MuseumExperience() {
     if (!selectedArtwork) return;
     setEditDetails({ title: selectedArtwork.title, note: selectedArtwork.note, year: selectedArtwork.year });
   }, [selectedArtwork]);
+
+  // Keeps a ref mirror of letterText so the animation-loop effect (which only
+  // re-runs when framesLoaded changes) always checks the latest saved letter,
+  // instead of the value captured when that effect first ran.
+  useEffect(() => {
+    letterTextRef.current = letterText;
+  }, [letterText]);
 
   useEffect(() => {
     fetch("/api/frames")
@@ -1434,29 +1453,9 @@ export default function MuseumExperience() {
     renderer.toneMapping = THREE.NoToneMapping;
 
     const interactive: THREE.Object3D[] = [];
-    buildRoom(scene, interactive, secretDoorRef, room12DoorRef);
+    const candleFlames: THREE.Object3D[] = [];
+    buildRoom(scene, interactive, secretDoorRef, room12DoorRef, candleFlames);
     buildLighting(scene);
-    // Janitor's closet sign on room 4 door
-    const janitorsCanvas = document.createElement("canvas");
-    janitorsCanvas.width = 512; janitorsCanvas.height = 160;
-    const jctx = janitorsCanvas.getContext("2d");
-    if (jctx) {
-      jctx.fillStyle = "#2b2927"; jctx.fillRect(0, 0, 512, 160);
-      jctx.fillStyle = "#f1eee8"; jctx.font = "bold 36px sans-serif"; jctx.textAlign = "center";
-      jctx.fillText("JANITOR'S CLOSET", 256, 60);
-      jctx.fillStyle = "#77736d"; jctx.font = "22px sans-serif";
-      jctx.fillText("Staff only. No public access.", 256, 105);
-      jctx.fillStyle = "#c2b4d8"; jctx.fillRect(180, 128, 152, 3);
-    }
-    const janitorsTexture = new THREE.CanvasTexture(janitorsCanvas);
-    janitorsTexture.colorSpace = THREE.SRGBColorSpace;
-    const janitorsSign = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.2, 0.7),
-      new THREE.MeshBasicMaterial({ map: janitorsTexture, transparent: true })
-    );
-    janitorsSign.position.set(-7.6, 3.2, 17.7);
-    janitorsSign.rotation.y = Math.PI / 2;
-    scene.add(janitorsSign);
 
     customFrameGroupsRef.current.clear();
     readSavedFrames().forEach((savedFrame) => {
@@ -1566,7 +1565,7 @@ export default function MuseumExperience() {
         const hit = raycaster.intersectObjects(scene.children, true).find((intersection) => intersection.object.userData.cake || intersection.object.userData.artworkId || intersection.object.userData.galleryWall);
         if (hit?.object.userData.cake) {
           setIsLetterOpen(true);
-          setIsEditingLetter(!letterText.trim());
+          setIsEditingLetter(!letterTextRef.current.trim());
         } else if (hit?.object.userData.galleryWall && movingFrameIdRef.current) {
           const movingId = movingFrameIdRef.current;
           const group = customFrameGroupsRef.current.get(movingId);
@@ -1647,6 +1646,13 @@ export default function MuseumExperience() {
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
 
+    // Every room's materials/shaders are otherwise compiled lazily on first
+    // render, which is what causes the noticeable stutter the first time you
+    // turn into a room you haven't seen yet. Compiling everything up front
+    // (once, before the loop starts) trades a little extra load time for a
+    // smooth walk through every room afterward.
+    renderer.compile(scene, camera);
+
     let frame = 0;
     let lastRenderTime = 0;
     const animate = (time = 0) => {
@@ -1667,7 +1673,7 @@ export default function MuseumExperience() {
         targetPosition.add(strafeDirection().multiplyScalar(strafe * moveSpeed));
         clampInterior(targetPosition, true, secretUnlockedRef.current);
       }
-      let nearestRoom = ROOM_GUIDE_TARGETS[0];
+      let nearestRoom: (typeof ROOM_GUIDE_TARGETS)[number] = ROOM_GUIDE_TARGETS[0];
       let nearestDist = Math.hypot(targetPosition.x - nearestRoom.x, targetPosition.z - nearestRoom.z);
       for (let i = 1; i < ROOM_GUIDE_TARGETS.length; i++) {
         const r = ROOM_GUIDE_TARGETS[i];
@@ -1737,10 +1743,9 @@ export default function MuseumExperience() {
           if (object.userData.complimentStatue) {
             const statuePosition = new THREE.Vector3();
             object.getWorldPosition(statuePosition);
-            if (Math.hypot(targetPosition.x - statuePosition.x, targetPosition.z - statuePosition.z) < 3.65) {
-              nearCompliment = true;
-              object.visible = false;
-            }
+            const isNear = Math.hypot(targetPosition.x - statuePosition.x, targetPosition.z - statuePosition.z) < 3.65;
+            if (isNear) nearCompliment = true;
+            object.visible = !isNear;
           }
         }
         Promise.resolve().then(() => setComplimentVisible(nearCompliment));
@@ -1756,8 +1761,10 @@ export default function MuseumExperience() {
       yaw += (targetYaw.value - yaw) * rotationLerp;
       camera.rotation.order = "YXZ";
       camera.rotation.set(-0.035, yaw, 0);
-      scene.traverse((object) => {
-        if (!object.userData.candleFlame) return;
+      // Direct list instead of scene.traverse: only 2 candle flames ever need
+      // this per-frame update, so there's no reason to walk every object in
+      // the museum (walls, frames, lights, etc.) 60 times a second to find them.
+      candleFlames.forEach((object) => {
         const flicker = Math.sin(time * 0.014 + object.position.x * 19) * 0.08 + Math.sin(time * 0.027) * 0.05;
         object.scale.set(0.45 + flicker * 0.22, 0.85 + flicker * 0.7, 0.45 + flicker * 0.16);
         object.rotation.z = flicker * 0.8;
@@ -1834,13 +1841,10 @@ export default function MuseumExperience() {
           <div className="mini-map-frame">
             <span className="mini-map-route-line mini-map-route-one" />
             <span className="mini-map-route-line mini-map-route-two" />
-            <span className="mini-map-room mini-map-room-main">01</span>
-            <span className="mini-map-room mini-map-room-corridor">02</span>
-            <span className="mini-map-room mini-map-room-north">03</span>
-            <span className="mini-map-room mini-map-room-west">07–09</span>
-            <span className="mini-map-room mini-map-room-east">05–06</span>
-            <span className="mini-map-room mini-map-room-final">10–11</span>
-            <span className="mini-map-player-dot" style={{ left: `${Math.max(5, Math.min(95, 50 + mapPlayer.x * 2.1))}%`, top: `${Math.max(7, Math.min(93, 16 + mapPlayer.z * 1.55))}%` }} aria-label="Your position" />
+            {MINI_MAP_MARKERS.map((marker) => (
+              <span key={marker.label} className="mini-map-room" style={{ left: `${marker.left}%`, top: `${marker.top}%` }}>{marker.label}</span>
+            ))}
+            <span className="mini-map-player-dot" style={{ left: `${mapPercent(mapPlayer.x, mapPlayer.z).left}%`, top: `${mapPercent(mapPlayer.x, mapPlayer.z).top}%` }} aria-label="Your position" />
           </div>
           <div className="mini-map-legend"><span className="mini-map-legend-dot" /> rooms <span className="mini-map-legend-player" /> you</div>
         </aside>
