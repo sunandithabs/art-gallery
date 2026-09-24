@@ -26,6 +26,20 @@ async function startServer() {
 
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+  // Sync committed frames.json (and letter.json) from the repo into the
+  // persistent uploads volume on every boot, so edits made in git actually
+  // reach the live site instead of being shadowed by the volume's old copy.
+  if (isProd) {
+    const repoUploadsDir = path.resolve(__dirname, "..", "uploads");
+    for (const fname of ["frames.json", "letter.json"]) {
+      const src = path.join(repoUploadsDir, fname);
+      const dest = path.join(uploadsDir, fname);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+  }
+
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadsDir),
     filename: (_req, file, cb) => {
