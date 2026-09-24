@@ -30,7 +30,11 @@ async function startServer() {
   // persistent uploads volume on every boot, so edits made in git actually
   // reach the live site instead of being shadowed by the volume's old copy.
   if (isProd) {
-    const repoUploadsDir = path.resolve(__dirname, "..", "uploads");
+    // NOTE: repo-root "uploads/" is NOT usable as a seed source here — it
+    // sits at the exact same path (/app/uploads) that Railway's persistent
+    // volume is mounted onto, so the volume shadows/overwrites it before
+    // the app ever starts. "seed-data/" is a different path, so it survives.
+    const repoUploadsDir = path.resolve(__dirname, "..", "seed-data");
     for (const fname of ["frames.json", "letter.json"]) {
       const src = path.join(repoUploadsDir, fname);
       const dest = path.join(uploadsDir, fname);
