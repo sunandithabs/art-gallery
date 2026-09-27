@@ -93,6 +93,8 @@ function roomSource(room: number, index: number): Artwork {
 }
 
 function roomTitle(room: number): string {
+  if (room === 2) return "Every other adventure in between";
+  if (room === 6) return "Solo adventures";
   return EXHIBITION[room]?.title ?? "Untitled room";
 }
 
@@ -283,6 +285,85 @@ function makeArtworkTexture(artwork: Artwork) {
     context.stroke();
   }
 
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function makeJanitorSignTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 700;
+  canvas.height = 420;
+  const context = canvas.getContext("2d");
+  if (!context) return new THREE.CanvasTexture(canvas);
+  context.fillStyle = "#2b2927";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#c9a94e";
+  context.lineWidth = 8;
+  context.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+  context.fillStyle = "#f4ede1";
+  context.textAlign = "center";
+  context.font = "700 46px DM Sans, sans-serif";
+  context.fillText("JANITOR'S CLOSET", canvas.width / 2, 150);
+  context.font = "600 30px DM Sans, sans-serif";
+  context.fillStyle = "#c9a94e";
+  context.fillText("STAFF ONLY", canvas.width / 2, 210);
+  context.font = "700 54px DM Sans, sans-serif";
+  context.fillStyle = "#e0554f";
+  context.fillText("DO NOT ENTER", canvas.width / 2, 300);
+  context.font = "400 22px DM Sans, sans-serif";
+  context.fillStyle = "#f4ede1";
+  context.fillText("(mops are watching)", canvas.width / 2, 360);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function addJanitorClosetSign(scene: THREE.Scene, x: number, z: number, rotationY: number) {
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.84), new THREE.MeshBasicMaterial({ map: makeJanitorSignTexture(), transparent: true }));
+  sign.position.set(x, 3.05, z);
+  sign.rotation.y = rotationY;
+  scene.add(sign);
+}
+
+function makeEstablishedTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 520;
+  canvas.height = 220;
+  const context = canvas.getContext("2d");
+  if (!context) return new THREE.CanvasTexture(canvas);
+  context.fillStyle = "#f4ede1";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#8a7350";
+  context.lineWidth = 4;
+  context.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+  context.fillStyle = "#2b2927";
+  context.textAlign = "center";
+  context.font = "600 30px DM Sans, sans-serif";
+  context.fillText("ANAGHA'S ART GALLERY", canvas.width / 2, 95);
+  context.font = "400 22px DM Sans, sans-serif";
+  context.fillStyle = "#77736d";
+  context.fillText("ESTABLISHED 2004", canvas.width / 2, 150);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function makeDoNotTouchTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 360;
+  canvas.height = 140;
+  const context = canvas.getContext("2d");
+  if (!context) return new THREE.CanvasTexture(canvas);
+  context.fillStyle = "#f4ede1";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#2b2927";
+  context.textAlign = "center";
+  context.font = "600 22px DM Sans, sans-serif";
+  context.fillText("PLEASE DO NOT TOUCH", canvas.width / 2, 60);
+  context.font = "400 16px DM Sans, sans-serif";
+  context.fillStyle = "#77736d";
+  context.fillText("thank you for visiting", canvas.width / 2, 95);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
@@ -646,6 +727,16 @@ function buildRoom(scene: THREE.Scene, interactive: THREE.Object3D[], secretDoor
   buildArtwork({ ...roomSource(1, 2), id: "quiet-interval-companion-right", index: "03 / 03", position: [4.75, 3.25, -5.82], rotationY: 0, width: 2.65, height: 2.75, wall: "primary" }, scene, interactive);
   addMuseumBench(scene, [0, 0, -2.7]);
   addGalleryAccent(scene, interactive, -5.8, -4.55, 0xc2b4d8);
+  addVelvetRopes(scene);
+  const establishedPlaque = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.63), new THREE.MeshBasicMaterial({ map: makeEstablishedTexture(), transparent: true }));
+  establishedPlaque.position.set(-7.85, 2.6, 4);
+  establishedPlaque.rotation.y = Math.PI / 2;
+  scene.add(establishedPlaque);
+  [[-4.75, 2.0, -5.7], [4.75, 2.0, -5.7]].forEach(([x, y, z]) => {
+    const placard = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.35), new THREE.MeshBasicMaterial({ map: makeDoNotTouchTexture(), transparent: true }));
+    placard.position.set(x, y, z);
+    scene.add(placard);
+  });
   buildSideRooms(scene, interactive);
   buildExtendedRooms(scene, interactive);
   const secretFloor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.width, 11), floorMaterial);
@@ -916,6 +1007,14 @@ function buildExtendedRooms(scene: THREE.Scene, interactive: THREE.Object3D[]) {
     addRoomThreshold(scene, layout.x, layout.z, palette.accent, layout.openings, roomW, roomD, roomOpening, charcoal);
     addRoomCeilingBays(scene, layout.x, layout.z, roomW, roomD);
     addRoomArtworkSet(scene, interactive, layout.room, layout.x, layout.z, left, right, bottom, layout.openings);
+    if (layout.room === 2) {
+      addJanitorClosetSign(scene, right - 0.11, layout.z, -Math.PI / 2);
+      addStonePlinth(scene, [left + 1.4, 0, top + 1.4], palette.accent);
+      addStonePlinth(scene, [right - 1.4, 0, bottom - 1.4], palette.accent);
+    }
+    if (layout.room === 3) {
+      addStonePlinth(scene, [left + 1.4, 0, bottom - 1.4], palette.accent);
+    }
     const label = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.32), new THREE.MeshBasicMaterial({ map: makeRoomLabelTexture(layout.room, palette.accent), transparent: true }));
     label.position.set(left + 0.12, 3.2, layout.z - 0.1);
     label.rotation.y = Math.PI / 2;
@@ -1206,6 +1305,8 @@ export default function MuseumExperience() {
   const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
   const [hoveredArtwork, setHoveredArtwork] = useState<Artwork | null>(null);
   const [complimentVisible, setComplimentVisible] = useState(false);
+  const [showGiftConfetti, setShowGiftConfetti] = useState(false);
+  const wasNearComplimentRef = useRef(false);
   const [hasExplored, setHasExplored] = useState(false);
   const hasExploredRef = useRef(false);
   const [isAdmissionOpen, setIsAdmissionOpen] = useState(false);
@@ -1213,10 +1314,6 @@ export default function MuseumExperience() {
   const [currentRoom, setCurrentRoom] = useState("ROOM 01");
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiFiredRef = useRef(false);
-  const [musicUrl, setMusicUrl] = useState("");
-  const [musicPlaying, setMusicPlaying] = useState(false);
-  const [musicVolume, setMusicVolume] = useState(0.4);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [mapPlayer, setMapPlayer] = useState({ x: 0, z: 4.35, yaw: 0 });
   const [visitedRooms, setVisitedRooms] = useState<string[]>(["01", "02"]);
   const [framesLoaded, setFramesLoaded] = useState(false);
@@ -1278,31 +1375,6 @@ export default function MuseumExperience() {
       })
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    fetch("/api/music")
-      .then((r) => (r.ok ? r.json() : { url: "" }))
-      .then((data) => {
-        if (data && typeof data.url === "string" && data.url) { setMusicUrl(data.url); setMusicPlaying(true); }
-      })
-      .catch(() => {});
-  }, []);
-
-  const uploadMusic = async (file: File | undefined) => {
-    if (!file || !file.type.startsWith("audio/")) return;
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      const { url } = await res.json();
-      setMusicUrl(url);
-      setMusicPlaying(true);
-      fetch("/api/music", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }).catch(() => {});
-    } catch {
-      window.alert("Music upload failed.");
-    }
-  };
 
   const armNewFrame = async (file: File | undefined) => {
     if (!file || (!file.type.startsWith("image/") && !file.type.startsWith("video/"))) return;
@@ -1748,6 +1820,11 @@ export default function MuseumExperience() {
             object.visible = !isNear;
           }
         }
+        if (nearCompliment && !wasNearComplimentRef.current) {
+          Promise.resolve().then(() => setShowGiftConfetti(true));
+          setTimeout(() => setShowGiftConfetti(false), 3200);
+        }
+        wasNearComplimentRef.current = nearCompliment;
         Promise.resolve().then(() => setComplimentVisible(nearCompliment));
         Promise.resolve().then(() => setCakePromptVisible(nearCake));
       }
@@ -1884,7 +1961,7 @@ export default function MuseumExperience() {
 
         <div className="museum-footer" aria-hidden="true">WASD / touch to move · drag to look</div>
 
-        {!pendingFrameMedia && !isPlacingFrame && (
+        {false && !pendingFrameMedia && !isPlacingFrame && (
           <label className="frame-add-tool">
             <span>+ Add frame</span>
             <input type="file" accept="image/*,video/*" onChange={(event) => armNewFrame(event.target.files?.[0])} />
@@ -1902,53 +1979,7 @@ export default function MuseumExperience() {
             <button type="button" onClick={cancelPendingFrame}>Cancel</button>
           </div>
         )}
-        <button type="button" className="frame-export-tool" onClick={exportSavedFrames}>Export saved frames</button>
-
-        <div className="music-player-tool">
-          {musicUrl && (
-            <audio
-              ref={audioRef}
-              src={musicUrl}
-              loop
-              autoPlay={musicPlaying}
-              onCanPlay={() => { if (audioRef.current) audioRef.current.volume = musicVolume; }}
-            />
-          )}
-          <button
-            type="button"
-            className="music-play-toggle"
-            onClick={() => {
-              if (!musicUrl) return;
-              const next = !musicPlaying;
-              setMusicPlaying(next);
-              if (audioRef.current) {
-                if (next) audioRef.current.play().catch(() => {});
-                else audioRef.current.pause();
-              }
-            }}
-            disabled={!musicUrl}
-          >
-            {musicPlaying ? "⏸ Music" : "▶ Music"}
-          </button>
-          <input
-            type="range"
-            className="music-volume-slider"
-            min={0}
-            max={1}
-            step={0.01}
-            value={musicVolume}
-            onChange={(event) => {
-              const vol = Number(event.target.value);
-              setMusicVolume(vol);
-              if (audioRef.current) audioRef.current.volume = vol;
-            }}
-            aria-label="Music volume"
-          />
-          <label className="music-upload-tool">
-            <span>{musicUrl ? "Change track" : "+ Add music"}</span>
-            <input type="file" accept="audio/*" onChange={(event) => uploadMusic(event.target.files?.[0])} />
-          </label>
-        </div>
+        {false && <button type="button" className="frame-export-tool" onClick={exportSavedFrames}>Export saved frames</button>}
 
         {pendingFrameMedia && !isPlacingFrame && (
           <aside className="frame-details-modal" role="dialog" aria-modal="true" aria-labelledby="frame-details-title">
@@ -1965,7 +1996,24 @@ export default function MuseumExperience() {
         )}
 
         {complimentVisible && (
-          <div className="compliment-note" role="status" aria-live="polite">happy birthday!<br /><span>-from jeff, bj, rj, chad, steve and kesha</span></div>
+          <div className="compliment-note compliment-note-big" role="status" aria-live="polite">happy birthday!<br /><span>-from jeff, bj, rj, chad, steve and kesha</span></div>
+        )}
+        {showGiftConfetti && (
+          <div className="confetti-burst" aria-hidden="true">
+            {Array.from({ length: 60 }).map((_, i) => (
+              <span
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.6}s`,
+                  animationDuration: `${2.4 + Math.random() * 1.6}s`,
+                  background: ["#c8ae7a", "#b9a6c6", "#9aa9ab", "#e8e1d7", "#d98a8a"][i % 5],
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              />
+            ))}
+          </div>
         )}
         {showConfetti && (
           <div className="confetti-burst" aria-hidden="true">
