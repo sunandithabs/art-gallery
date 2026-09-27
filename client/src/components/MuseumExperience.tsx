@@ -1283,7 +1283,7 @@ export default function MuseumExperience() {
     fetch("/api/music")
       .then((r) => (r.ok ? r.json() : { url: "" }))
       .then((data) => {
-        if (data && typeof data.url === "string" && data.url) setMusicUrl(data.url);
+        if (data && typeof data.url === "string" && data.url) { setMusicUrl(data.url); setMusicPlaying(true); }
       })
       .catch(() => {});
   }, []);
@@ -1868,7 +1868,8 @@ export default function MuseumExperience() {
             <button className="welcome-notice-close" type="button" aria-label="Close curator welcome" onClick={() => setShowWelcome(false)}>×</button>
             <span className="welcome-notice-kicker">A NOTE FROM THE CURATOR</span>
             <h1 id="welcome-title">Welcome to Anagha’s Art Gallery.</h1>
-            <p>Take your time. Drag around to look closely, use <strong>WASD</strong> or the touch controls to move, and tap the mini map to find your way through the rooms.</p>
+            <p>Take your time. Drag to look around, <strong>WASD</strong> or touch to move.</p>
+            <p className="welcome-notice-ps">PS, harsh and neha if you're seeing this you guys gotta add the captions to your rooms. otherwise if you're seeing this in person w her im assuming you'll jus tell her instead, jus as fun. enjoy.</p>
             <p>Every wall holds a small part of the story. When you’ve visited all eleven rooms, a final door will open for the exhibit.</p>
             <button className="welcome-notice-enter" type="button" onClick={() => setShowWelcome(false)}>Begin exploring</button>
           </aside>
@@ -2035,7 +2036,7 @@ export default function MuseumExperience() {
             {selectedArtwork.videoSrc
               ? <video className="artwork-video" src={selectedArtwork.videoSrc} autoPlay muted loop controls playsInline />
               : selectedArtwork.image && <img className="artwork-video artwork-uploaded-image" src={selectedArtwork.image} alt={selectedArtwork.title} />}
-            {selectedArtwork.custom && <div className="frame-editor" aria-label="Frame controls">
+            {false && selectedArtwork.custom && <div className="frame-editor" aria-label="Frame controls">
               <strong>Frame controls</strong>
               <label>Name<input value={editDetails.title} onChange={(event) => setEditDetails((current) => ({ ...current, title: event.target.value }))} maxLength={60} /></label>
               <label>Caption<textarea value={editDetails.note} onChange={(event) => setEditDetails((current) => ({ ...current, note: event.target.value }))} maxLength={200} /></label>
